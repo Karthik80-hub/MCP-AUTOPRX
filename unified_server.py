@@ -73,6 +73,9 @@ PROCESSED_EVENTS = set()
 
 class UnifiedServer:
     def __init__(self):
+        if not FASTAPI_AVAILABLE:
+            raise ImportError("FastAPI is required but not available. Install with: pip install fastapi uvicorn")
+        
         self.app = FastAPI(title="MCP-AutoPRX Unified Server", version="1.0.0")
         self.mcp = FastMCP("unified-pr-agent") if MCP_AVAILABLE else None
         self.setup_routes()
