@@ -14,8 +14,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 # Import the modules to test
 import unified_server
-from mcp_server.tools import pr_analysis, ci_monitor, slack_notifier
-from mcp_server.prompts import pr_prompts, ci_prompts, review_prompts
+
+# Import tools from mcp-server directory
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mcp-server')))
+from tools import pr_analysis, ci_monitor, slack_notifier
+from prompts import pr_prompts, ci_prompts, review_prompts
 
 
 class TestUnifiedServer:
