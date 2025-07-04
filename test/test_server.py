@@ -82,8 +82,9 @@ class TestToolFunctions:
         
         # Check template structure
         for template in templates:
-            assert "name" in template
+            assert "filename" in template
             assert "type" in template
+            assert "content" in template
     
     @pytest.mark.asyncio
     async def test_get_recent_actions_events_empty(self):
