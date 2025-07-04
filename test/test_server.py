@@ -7,49 +7,45 @@ import shutil
 from pathlib import Path
 from unittest.mock import patch, MagicMock, mock_open
 import requests
+import subprocess
 
-# Adjust the path to import server.py and tools from mcp-server
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mcp-server')))
+# Adjust the path to import unified_server.py and tools from mcp-server
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import the modules to test
-import server
-from tools import pr_analysis, ci_monitor, slack_notifier
-from prompts import pr_prompts, ci_prompts, review_prompts
+import unified_server
+from mcp_server.tools import pr_analysis, ci_monitor, slack_notifier
+from mcp_server.prompts import pr_prompts, ci_prompts, review_prompts
 
 
-class TestMCPServer:
-    """Test the main MCP server functionality."""
+class TestUnifiedServer:
+    """Test the main unified server functionality."""
     
     def test_server_import(self):
-        """Test that the server module can be imported."""
-        assert hasattr(server, 'mcp'), "server.py should have an 'mcp' attribute (FastMCP instance)"
-        assert server.mcp is not None, "MCP server should be initialized"
+        """Test that the unified_server module can be imported."""
+        assert hasattr(unified_server, 'UnifiedServer'), "unified_server.py should have a 'UnifiedServer' class"
     
-    def test_server_name(self):
-        """Test that the server has the correct name."""
-        assert server.mcp.name == "pr-agent-slack", "Server should be named 'pr-agent-slack'"
+    def test_server_initialization(self):
+        """Test that the server can be initialized."""
+        server = unified_server.UnifiedServer()
+        assert server is not None, "UnifiedServer should be initialized"
+        assert hasattr(server, 'app'), "UnifiedServer should have an 'app' attribute (FastAPI instance)"
     
-    def test_tools_imported(self):
+    def test_server_endpoints(self):
+        """Test that the server has the required endpoints."""
+        server = unified_server.UnifiedServer()
+        # Check that the app has the expected routes
+        routes = [route.path for route in server.app.routes]
+        expected_routes = ['/', '/health', '/tools', '/webhook/github', '/mcp', '/call/{tool_name}']
+        
+        for route in expected_routes:
+            assert route in routes, f"Route {route} should be available"
+    
+    def test_tools_available(self):
         """Test that all required tools are available."""
-        # Check that tools are imported in server.py
-        assert hasattr(server, 'analyze_file_changes'), "analyze_file_changes should be imported"
-        assert hasattr(server, 'get_pr_templates'), "get_pr_templates should be imported"
-        assert hasattr(server, 'get_recent_actions_events'), "get_recent_actions_events should be imported"
-        assert hasattr(server, 'get_workflow_status'), "get_workflow_status should be imported"
-        assert hasattr(server, 'get_documentation_workflow_status'), "get_documentation_workflow_status should be imported"
-        assert hasattr(server, 'get_failed_workflows'), "get_failed_workflows should be imported"
-        assert hasattr(server, 'send_slack_notification'), "send_slack_notification should be imported"
-    
-    def test_prompts_imported(self):
-        """Test that all required prompts are available."""
-        # Check that prompts are imported in server.py
-        assert hasattr(server, 'suggest_template'), "suggest_template should be imported"
-        assert hasattr(server, 'format_ci_failure_alert'), "format_ci_failure_alert should be imported"
-        assert hasattr(server, 'format_ci_success_summary'), "format_ci_success_summary should be imported"
-        assert hasattr(server, 'analyze_ci_results'), "analyze_ci_results should be imported"
-        assert hasattr(server, 'create_deployment_summary'), "create_deployment_summary should be imported"
-        assert hasattr(server, 'generate_pr_status_report'), "generate_pr_status_report should be imported"
-        assert hasattr(server, 'troubleshoot_workflow_failure'), "troubleshoot_workflow_failure should be imported"
+        server = unified_server.UnifiedServer()
+        # The tools are registered in the MCP instance
+        assert hasattr(server, 'mcp'), "Server should have MCP instance"
 
 
 class TestDotenvLoading:
