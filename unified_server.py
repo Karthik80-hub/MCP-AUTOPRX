@@ -77,7 +77,17 @@ class UnifiedServer:
             raise ImportError("FastAPI is required but not available. Install with: pip install fastapi uvicorn")
         
         self.app = FastAPI(title="MCP-AutoPRX Unified Server", version="1.0.0")
-        self.mcp = FastMCP("unified-pr-agent") if MCP_AVAILABLE else None
+        
+        # Initialize MCP only if available
+        if MCP_AVAILABLE and MCP_TOOLS_AVAILABLE:
+            try:
+                self.mcp = FastMCP("unified-pr-agent")
+            except Exception as e:
+                print(f"Warning: MCP initialization failed: {e}")
+                self.mcp = None
+        else:
+            self.mcp = None
+        
         self.setup_routes()
         self.setup_middleware()
         self.setup_mcp_tools()

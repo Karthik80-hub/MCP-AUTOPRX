@@ -76,8 +76,7 @@ GITHUB_WEBHOOK_SECRET=your_webhook_secret
 
 ### PR Analysis Tools
 - `analyze_file_changes` - Analyze git file changes and generate summaries
-- `get_pr_templates` - Get available PR templates for different change types
-- `suggest_template` - Suggest appropriate PR template based on changes
+- `get_pr_templates` - Get available PR templates with metadata
 
 ### CI/CD Monitoring Tools
 - `get_recent_actions_events` - Get recent GitHub Actions events
@@ -114,22 +113,127 @@ MCP-AutoPRX/
 │   ├── prompts/         # AI prompts
 │   └── mcp_instance.py  # MCP instance
 ├── templates/           # PR templates
-└── test/               # Test suite
+├── test/               # Test suite
+└── .github/workflows/   # CI/CD workflows
+    ├── build_documentation.yml      # Main CI/CD pipeline
+    ├── upload_pr_documentation.yml  # Deployment preparation
+    └── build_pr_documentation.yml   # PR testing
 ```
 
 ## Testing
 
 Run the test suite:
 ```bash
-pytest
+python -m pytest test/ -v
 ```
 
 Test individual components:
 ```bash
-python -m pytest test/test_server.py
-python -m pytest test/test_pr_analysis.py
-python -m pytest test/test_slack_notifier.py
+python -m pytest test/test_server.py -v
+python -m pytest test/test_pr_analysis.py -v
+python -m pytest test/test_ci_monitor.py -v
+python -m pytest test/test_slack_notifier.py -v
 ```
+
+Run async tests:
+```bash
+python -m pytest test/ -m asyncio
+```
+
+## CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment. The CI/CD pipeline ensures code quality, automated testing, and seamless deployment to Railway.
+
+### GitHub Actions Workflows
+
+#### 1. Build Documentation (`build_documentation.yml`)
+**Purpose**: Main CI/CD pipeline for comprehensive testing and validation.
+
+**Triggers**:
+- Push to main branch
+- Pull requests to main branch
+
+**What it does**:
+- Sets up Python 3.10 environment
+- Installs all dependencies including test packages
+- Runs comprehensive test suite with verbose output
+- Validates server health and readiness
+- Ensures code quality before deployment
+
+**Key Features**:
+- Early failure detection (`-x` flag stops on first failure)
+- Comprehensive dependency installation
+- Server health validation
+- Documentation build verification
+
+#### 2. Deploy Preparation (`upload_pr_documentation.yml`)
+**Purpose**: Prepares and validates the project for Railway deployment.
+
+**Triggers**:
+- Push to main branch only
+
+**What it does**:
+- Validates server configuration files
+- Checks Railway configuration presence
+- Prepares deployment environment
+- Ensures all required files are present
+
+**Key Features**:
+- Server file validation (`unified_server.py`)
+- Railway configuration verification (`railway.json`)
+- Deployment readiness confirmation
+- Environment validation
+
+#### 3. PR Testing (`build_pr_documentation.yml`)
+**Purpose**: Comprehensive testing for pull requests.
+
+**Triggers**:
+- Pull requests to main branch only
+
+**What it does**:
+- Runs PR-specific test suite
+- Validates code quality
+- Ensures PR meets quality standards
+- Provides feedback before merge
+
+**Key Features**:
+- PR-specific testing environment
+- Code quality validation
+- Early feedback for contributors
+- Prevents breaking changes
+
+### Workflow Configuration
+
+All workflows use:
+- **Python 3.10**: Required for MCP compatibility
+- **Ubuntu Latest**: Consistent CI environment
+- **Comprehensive Dependencies**: All test and runtime dependencies
+- **Verbose Output**: Detailed error reporting for debugging
+
+### Workflow Commands
+
+Monitor workflow status:
+```bash
+# Check all workflow runs
+gh run list
+
+# View specific workflow logs
+gh run view <run-id>
+
+# Rerun failed workflow
+gh run rerun <run-id>
+
+# Check specific workflow
+gh run list --workflow=build_documentation.yml
+```
+
+### CI/CD Benefits
+
+- **Automated Quality Assurance**: Every push and PR is automatically tested
+- **Early Issue Detection**: Problems are caught before they reach production
+- **Consistent Environment**: All tests run in the same environment
+- **Deployment Safety**: Server configuration is validated before deployment
+- **Developer Experience**: Immediate feedback on code changes
 
 ## Railway Configuration
 
@@ -148,6 +252,15 @@ The `railway.json` file configures:
 - Rate limiting (consider implementing)
 - HTTPS provided by Railway
 
+## Documentation
+
+This project includes comprehensive documentation:
+
+- **README.md** - This file, project overview and quick start
+- **PROJECT_KNOWLEDGE_BASE.md** - Comprehensive project knowledge and architecture
+- **QUICK_REFERENCE.md** - Quick commands and API reference
+- **TROUBLESHOOTING_GUIDE.md** - Common issues and solutions
+
 ## Contributing
 
 1. Fork the repository
@@ -155,6 +268,8 @@ The `railway.json` file configures:
 3. Make your changes
 4. Add tests
 5. Submit a pull request
+
+**Note**: All pull requests are automatically tested by the CI/CD pipeline before merging.
 
 ## License
 
