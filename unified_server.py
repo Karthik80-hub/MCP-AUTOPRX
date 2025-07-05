@@ -198,13 +198,51 @@ class UnifiedServer:
                     print("Warning: Empty webhook body received")
                     return {"status": "received", "event_type": "empty", "message": "Empty body"}
                 
-                # Try to parse JSON
-                try:
-                    data = await request.json()
-                except json.JSONDecodeError as json_error:
-                    print(f"JSON decode error: {json_error}")
-                    print(f"Raw body: {body[:200]}...")  # Log first 200 chars
-                    return {"status": "error", "message": "Invalid JSON", "detail": str(json_error)}
+                # Check content type
+                content_type = request.headers.get("content-type", "")
+                print(f"Content-Type: {content_type}")
+                
+                # Handle different content types
+                if "application/json" in content_type:
+                    # JSON payload
+                    try:
+                        data = await request.json()
+                    except json.JSONDecodeError as json_error:
+                        print(f"JSON decode error: {json_error}")
+                        print(f"Raw body: {body[:200]}...")
+                        return {"status": "error", "message": "Invalid JSON", "detail": str(json_error)}
+                elif "application/x-www-form-urlencoded" in content_type:
+                    # Form-encoded payload (GitHub sometimes sends this)
+                    try:
+                        form_data = await request.form()
+                        payload = form_data.get("payload")
+                        if payload:
+                            data = json.loads(payload)
+                        else:
+                            print("No payload in form data")
+                            return {"status": "error", "message": "No payload in form data"}
+                    except json.JSONDecodeError as json_error:
+                        print(f"Form payload JSON decode error: {json_error}")
+                        print(f"Raw body: {body[:200]}...")
+                        return {"status": "error", "message": "Invalid JSON in form payload", "detail": str(json_error)}
+                else:
+                    # Try JSON first, then form data
+                    try:
+                        data = await request.json()
+                    except json.JSONDecodeError:
+                        try:
+                            form_data = await request.form()
+                            payload = form_data.get("payload")
+                            if payload:
+                                data = json.loads(payload)
+                            else:
+                                print("Could not parse as JSON or form data")
+                                print(f"Raw body: {body[:200]}...")
+                                return {"status": "error", "message": "Could not parse payload"}
+                        except Exception as parse_error:
+                            print(f"Parse error: {parse_error}")
+                            print(f"Raw body: {body[:200]}...")
+                            return {"status": "error", "message": "Could not parse payload", "detail": str(parse_error)}
                 
                 event_type = request.headers.get("X-GitHub-Event", "unknown")
                 
