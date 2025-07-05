@@ -8,7 +8,7 @@ import os
 import json
 import asyncio
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 import smtplib
@@ -125,7 +125,7 @@ class UnifiedServer:
         async def health_check():
             return {
                 "status": "healthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "services": {
                     "webhook": "active",
                     "notifications": "active",
@@ -192,7 +192,20 @@ class UnifiedServer:
         async def github_webhook(request: Request):
             """Handle GitHub webhooks - combines webhook server functionality."""
             try:
-                data = await request.json()
+                # Get raw body first to debug
+                body = await request.body()
+                if not body:
+                    print("Warning: Empty webhook body received")
+                    return {"status": "received", "event_type": "empty", "message": "Empty body"}
+                
+                # Try to parse JSON
+                try:
+                    data = await request.json()
+                except json.JSONDecodeError as json_error:
+                    print(f"JSON decode error: {json_error}")
+                    print(f"Raw body: {body[:200]}...")  # Log first 200 chars
+                    return {"status": "error", "message": "Invalid JSON", "detail": str(json_error)}
+                
                 event_type = request.headers.get("X-GitHub-Event", "unknown")
                 
                 print(f"Received {event_type} event from GitHub")
@@ -210,6 +223,8 @@ class UnifiedServer:
                 
             except Exception as e:
                 print(f"Error processing webhook: {e}")
+                import traceback
+                traceback.print_exc()
                 raise HTTPException(status_code=400, detail=str(e))
         
         if MCP_AVAILABLE:
@@ -461,7 +476,7 @@ class UnifiedServer:
             sender = data.get("sender", {}).get("login")
         
         event = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event_type": event_type,
             "action": action,
             "workflow_run": workflow_run,
