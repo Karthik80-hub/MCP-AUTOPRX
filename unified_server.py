@@ -536,29 +536,37 @@ class UnifiedServer:
     
     def run(self):
         """Run the unified server."""
-        port = int(os.getenv("PORT", 8080))
-        
-        print("Starting MCP-AutoPRX Unified Server...")
-        print(f"Server will be available at: http://0.0.0.0:{port}")
-        print("Combined services:")
-        print("  - GitHub webhook handling")
-        print("  - MCP server for LLMs")
-        print("  - Slack and Gmail notifications")
-        print("Available endpoints:")
-        print("  - / (server info)")
-        print("  - /health (health check)")
-        print("  - /tools (list available tools)")
-        print("  - /webhook/github (GitHub webhooks)")
-        print("  - /mcp (MCP endpoint)")
-        print("  - /call/{tool_name} (direct tool calling)")
-        print("  - /docs (API documentation)")
-        print()
-        
-        if not FASTAPI_AVAILABLE:
-            print("FastAPI not available. Install with: pip install fastapi uvicorn")
-            return
-        
-        uvicorn.run(self.app, host="0.0.0.0", port=port)
+        try:
+            port = int(os.getenv("PORT", 8080))
+            
+            print("Starting MCP-AutoPRX Unified Server...")
+            print(f"Server will be available at: http://0.0.0.0:{port}")
+            print("Combined services:")
+            print("  - GitHub webhook handling")
+            print("  - MCP server for LLMs")
+            print("  - Slack and Gmail notifications")
+            print("Available endpoints:")
+            print("  - / (server info)")
+            print("  - /health (health check)")
+            print("  - /tools (list available tools)")
+            print("  - /webhook/github (GitHub webhooks)")
+            print("  - /mcp (MCP endpoint)")
+            print("  - /call/{tool_name} (direct tool calling)")
+            print("  - /docs (API documentation)")
+            print()
+            
+            if not FASTAPI_AVAILABLE:
+                print("FastAPI not available. Install with: pip install fastapi uvicorn")
+                return
+            
+            print("Starting uvicorn server...")
+            uvicorn.run(self.app, host="0.0.0.0", port=port, log_level="info")
+            
+        except Exception as e:
+            print(f"Error starting server: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
 
 if __name__ == "__main__":
     server = UnifiedServer()
