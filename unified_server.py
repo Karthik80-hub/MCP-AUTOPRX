@@ -195,15 +195,21 @@ class UnifiedServer:
                 data = await request.json()
                 event_type = request.headers.get("X-GitHub-Event", "unknown")
                 
+                print(f"Received {event_type} event from GitHub")
+                print(f"Repository: {data.get('repository', {}).get('full_name', 'Unknown')}")
+                print(f"Sender: {data.get('sender', {}).get('login', 'Unknown')}")
+                
                 # Store event
                 await self.store_event(event_type, data)
                 
                 # Send automatic notifications
                 await self.process_event_notifications(event_type, data)
                 
+                print(f"Successfully processed {event_type} event")
                 return {"status": "received", "event_type": event_type}
                 
             except Exception as e:
+                print(f"Error processing webhook: {e}")
                 raise HTTPException(status_code=400, detail=str(e))
         
         if MCP_AVAILABLE:
@@ -439,10 +445,30 @@ class UnifiedServer:
     
     async def store_event(self, event_type: str, data: dict):
         """Store GitHub event."""
+        # Extract key information from the event
+        repository = data.get("repository", {}).get("full_name") if data.get("repository") else None
+        sender = data.get("sender", {}).get("login") if data.get("sender") else None
+        action = data.get("action")
+        workflow_run = data.get("workflow_run")
+        check_run = data.get("check_run")
+        
+        # For ping events, extract hook information
+        if event_type == "ping":
+            hook = data.get("hook", {})
+            hook_id = hook.get("id")
+            hook_url = hook.get("config", {}).get("url")
+            repository = data.get("repository", {}).get("full_name")
+            sender = data.get("sender", {}).get("login")
+        
         event = {
             "timestamp": datetime.utcnow().isoformat(),
             "event_type": event_type,
-            "data": data
+            "action": action,
+            "workflow_run": workflow_run,
+            "check_run": check_run,
+            "repository": repository,
+            "sender": sender,
+            "data": data  # Store full data for detailed analysis
         }
         
         events = []
@@ -458,7 +484,17 @@ class UnifiedServer:
     
     async def process_event_notifications(self, event_type: str, data: dict):
         """Process event and send notifications."""
-        if event_type == "push":
+        if event_type == "ping":
+            # Handle ping events (webhook verification)
+            repo = data.get("repository", {}).get("full_name", "Unknown")
+            hook_id = data.get("hook", {}).get("id", "Unknown")
+            hook_url = data.get("hook", {}).get("config", {}).get("url", "Unknown")
+            
+            message = f"Webhook ping received from {repo} (Hook ID: {hook_id}, URL: {hook_url})"
+            print(f"PING: {message}")  # Log to console for debugging
+            await self.send_slack_message(message)
+            
+        elif event_type == "push":
             repo = data.get("repository", {}).get("full_name", "Unknown")
             pusher = data.get("pusher", {}).get("name", "Unknown")
             ref = data.get("ref", "Unknown")
