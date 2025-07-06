@@ -211,6 +211,60 @@ class UnifiedServer:
                 "note": "Tools are registered with the shared MCP instance"
             }
         
+        @self.app.get("/test-email")
+        async def test_email():
+            """Test Gmail functionality independently."""
+            try:
+                # Check environment variables
+                gmail_user = os.getenv("GMAIL_USER")
+                gmail_password = os.getenv("GMAIL_APP_PASSWORD")
+                default_recipient = os.getenv("DEFAULT_EMAIL_RECIPIENT")
+                
+                env_check = {
+                    "GMAIL_USER": "✅ Set" if gmail_user else "❌ Missing",
+                    "GMAIL_APP_PASSWORD": "✅ Set" if gmail_password else "❌ Missing",
+                    "DEFAULT_EMAIL_RECIPIENT": "✅ Set" if default_recipient else "❌ Missing"
+                }
+                
+                if not all([gmail_user, gmail_password, default_recipient]):
+                    return {
+                        "status": "error",
+                        "message": "Missing environment variables",
+                        "env_check": env_check
+                    }
+                
+                # Test email
+                subject = "🔧 MCP Email Test"
+                message = f"""
+                This is a test email from the MCP-AutoPRX server via Railway.
+                
+                Timestamp: {datetime.now(timezone.utc).isoformat()}
+                Server: MCP-AutoPRX Unified Server
+                Environment: Railway Production
+                
+                If you receive this, Gmail integration is working correctly!
+                """
+                
+                result = await self.send_gmail_message(subject, message, default_recipient)
+                
+                return {
+                    "status": "success" if "successfully" in result else "error",
+                    "message": result,
+                    "env_check": env_check,
+                    "test_details": {
+                        "from": gmail_user,
+                        "to": default_recipient,
+                        "subject": subject
+                    }
+                }
+                
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "message": f"Test failed: {str(e)}",
+                    "env_check": env_check if 'env_check' in locals() else "Could not check"
+                }
+        
         @self.app.post("/webhook/github")
         async def github_webhook(request: Request):
             """Handle GitHub webhooks - combines webhook server functionality."""
