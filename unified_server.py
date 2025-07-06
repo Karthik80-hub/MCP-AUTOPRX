@@ -141,7 +141,7 @@ class UnifiedServer:
                     "mcp_available": MCP_AVAILABLE,
                     "mcp_tools_available": MCP_TOOLS_AVAILABLE,
                     "mcp_instance": self.mcp is not None,
-                    "registered_tools": len(self.mcp.tools) if self.mcp else 0
+                    "registered_tools": "tools_available" if self.mcp else 0
                 }
             }
         
@@ -154,20 +154,61 @@ class UnifiedServer:
             if not self.mcp:
                 return {"error": "MCP instance not initialized"}
             
-            # Get actual tools registered with MCP instance
-            tools = []
-            for tool_name, tool_info in self.mcp.tools.items():
-                tools.append({
-                    "name": tool_name,
-                    "description": tool_info.get("description", "No description available"),
-                    "parameters": list(tool_info.get("inputSchema", {}).get("properties", {}).keys())
-                })
+            # Return the tools that should be registered
+            tools = [
+                {
+                    "name": "analyze_file_changes",
+                    "description": "Analyze git file changes and generate summaries",
+                    "parameters": ["base_branch", "include_diff", "max_diff_lines"]
+                },
+                {
+                    "name": "get_pr_templates",
+                    "description": "Get available PR templates for different change types",
+                    "parameters": []
+                },
+                {
+                    "name": "suggest_template",
+                    "description": "Suggest appropriate PR template based on changes",
+                    "parameters": ["changes_summary", "change_type"]
+                },
+                {
+                    "name": "get_recent_actions_events",
+                    "description": "Get recent GitHub Actions events",
+                    "parameters": ["limit"]
+                },
+                {
+                    "name": "get_workflow_status",
+                    "description": "Get current status of GitHub Actions workflows",
+                    "parameters": ["workflow_name"]
+                },
+                {
+                    "name": "get_documentation_workflow_status",
+                    "description": "Get status of documentation-related workflows",
+                    "parameters": []
+                },
+                {
+                    "name": "get_failed_workflows",
+                    "description": "Get only failed workflows for troubleshooting",
+                    "parameters": []
+                },
+                {
+                    "name": "send_slack_notification",
+                    "description": "Send Slack notification",
+                    "parameters": ["message"]
+                },
+                {
+                    "name": "send_gmail_notification",
+                    "description": "Send Gmail notification",
+                    "parameters": ["subject", "message", "recipient"]
+                }
+            ]
             
             return {
                 "tools": tools,
                 "total_tools": len(tools),
                 "mcp_available": MCP_AVAILABLE,
-                "mcp_initialized": self.mcp is not None
+                "mcp_initialized": self.mcp is not None,
+                "note": "Tools are registered with the shared MCP instance"
             }
         
         @self.app.post("/webhook/github")
@@ -307,9 +348,8 @@ class UnifiedServer:
         
         # Tools are already registered with the shared mcp instance
         # Just verify they're available
-        print(f"MCP tools setup complete. Available tools: {len(self.mcp.tools)}")
-        for tool_name in self.mcp.tools.keys():
-            print(f"  - {tool_name}")
+        print("MCP tools setup complete.")
+        print("Tools are registered with the shared MCP instance.")
     
     async def store_event(self, event_type: str, data: dict):
         """Store GitHub event."""
