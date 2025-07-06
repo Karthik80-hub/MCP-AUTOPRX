@@ -502,7 +502,9 @@ class UnifiedServer:
                 
                 Please check the logs and address any issues.
                 """
-                await self.send_gmail_message(email_subject, email_message)
+                print(f"Attempting to send Gmail notification: {email_subject}")
+                gmail_result = await self.send_gmail_message(email_subject, email_message)
+                print(f"Gmail notification result: {gmail_result}")
                 
             elif conclusion == "success":
                 # Slack notification
@@ -523,7 +525,9 @@ class UnifiedServer:
                 
                 Deployment completed successfully!
                 """
-                await self.send_gmail_message(email_subject, email_message)
+                print(f"Attempting to send Gmail notification: {email_subject}")
+                gmail_result = await self.send_gmail_message(email_subject, email_message)
+                print(f"Gmail notification result: {gmail_result}")
     
     async def send_slack_message(self, message: str) -> str:
         """Send message to Slack."""
@@ -543,18 +547,25 @@ class UnifiedServer:
     
     async def send_gmail_message(self, subject: str, message: str, recipient: str = None) -> str:
         """Send message via Gmail."""
-        gmail_user = os.getenv("GMAIL_USER")
-        gmail_password = os.getenv("GMAIL_APP_PASSWORD")
-        default_recipient = os.getenv("DEFAULT_EMAIL_RECIPIENT")
+        gmail_user = os.getenv("GMAIL_USER", "").strip()
+        gmail_password = os.getenv("GMAIL_APP_PASSWORD", "").strip()
+        default_recipient = os.getenv("DEFAULT_EMAIL_RECIPIENT", "").strip()
+        
+        print(f"Gmail debug - User: {gmail_user[:10]}..., Password: {'Set' if gmail_password else 'Not set'}, Default recipient: {default_recipient}")
         
         if not gmail_user or not gmail_password:
-            return "Error: GMAIL_USER and GMAIL_APP_PASSWORD not set"
+            error_msg = "Error: GMAIL_USER and GMAIL_APP_PASSWORD not set"
+            print(f"Gmail error: {error_msg}")
+            return error_msg
         
         recipient = recipient or default_recipient
         if not recipient:
-            return "Error: No recipient email specified"
+            error_msg = "Error: No recipient email specified"
+            print(f"Gmail error: {error_msg}")
+            return error_msg
         
         try:
+            print(f"Gmail: Creating email message to {recipient}")
             msg = MIMEMultipart()
             msg['From'] = gmail_user
             msg['To'] = recipient
@@ -577,17 +588,24 @@ class UnifiedServer:
             
             msg.attach(MIMEText(html_body, 'html'))
             
+            print(f"Gmail: Connecting to SMTP server")
             server = smtplib.SMTP('smtp.gmail.com', 587)
             server.starttls()
+            print(f"Gmail: Logging in with user {gmail_user}")
             server.login(gmail_user, gmail_password)
+            print(f"Gmail: Sending email")
             text = msg.as_string()
             server.sendmail(gmail_user, recipient, text)
             server.quit()
             
-            return f"Gmail sent successfully to {recipient}"
+            success_msg = f"Gmail sent successfully to {recipient}"
+            print(f"Gmail: {success_msg}")
+            return success_msg
             
         except Exception as e:
-            return f"Gmail error: {str(e)}"
+            error_msg = f"Gmail error: {str(e)}"
+            print(f"Gmail exception: {error_msg}")
+            return error_msg
     
     def run(self):
         """Run the unified server."""
