@@ -216,9 +216,9 @@ class UnifiedServer:
             """Test Gmail functionality independently."""
             try:
                 # Check environment variables
-                gmail_user = os.getenv("GMAIL_USER")
-                gmail_password = os.getenv("GMAIL_APP_PASSWORD")
-                default_recipient = os.getenv("DEFAULT_EMAIL_RECIPIENT")
+                gmail_user = os.getenv("GMAIL_USER", "").strip()
+                gmail_password = os.getenv("GMAIL_APP_PASSWORD", "").strip()
+                default_recipient = os.getenv("DEFAULT_EMAIL_RECIPIENT", "").strip()
                 
                 env_check = {
                     "GMAIL_USER": "✅ Set" if gmail_user else "❌ Missing",
@@ -245,7 +245,20 @@ class UnifiedServer:
                 If you receive this, Gmail integration is working correctly!
                 """
                 
+                # Add more detailed logging
+                print(f"Attempting to send email from {gmail_user} to {default_recipient}")
+                # Test sending to both recipient and sender
                 result = await self.send_gmail_message(subject, message, default_recipient)
+                
+                # Also try sending to the sender email to test
+                if gmail_user != default_recipient:
+                    test_result = await self.send_gmail_message(
+                        f"🔧 Self-Test: {subject}", 
+                        f"Self-test email: {message}", 
+                        gmail_user
+                    )
+                    print(f"Self-test email result: {test_result}")
+                print(f"Email send result: {result}")
                 
                 return {
                     "status": "success" if "successfully" in result else "error",
@@ -471,12 +484,46 @@ class UnifiedServer:
             repo = data.get("repository", {}).get("full_name", "Unknown")
             
             if conclusion == "failure":
-                message = f"CI Failure Alert - Workflow: {workflow_name}, Repository: {repo}, Branch: {workflow.get('head_branch', 'Unknown')}, Run Number: {workflow.get('run_number', 'Unknown')}, View Details: {workflow.get('html_url', '#')}"
-                await self.send_slack_message(message)
+                # Slack notification
+                slack_message = f"CI Failure Alert - Workflow: {workflow_name}, Repository: {repo}, Branch: {workflow.get('head_branch', 'Unknown')}, Run Number: {workflow.get('run_number', 'Unknown')}, View Details: {workflow.get('html_url', '#')}"
+                await self.send_slack_message(slack_message)
+                
+                # Gmail notification
+                email_subject = f"🚨 CI Failure Alert - {repo}"
+                email_message = f"""
+                CI Failure Alert
+                
+                A CI workflow has failed:
+                • Workflow: {workflow_name}
+                • Repository: {repo}
+                • Branch: {workflow.get('head_branch', 'Unknown')}
+                • Run Number: {workflow.get('run_number', 'Unknown')}
+                • View Details: {workflow.get('html_url', '#')}
+                
+                Please check the logs and address any issues.
+                """
+                await self.send_gmail_message(email_subject, email_message)
                 
             elif conclusion == "success":
-                message = f"Deployment Successful - Workflow: {workflow_name}, Repository: {repo}, Branch: {workflow.get('head_branch', 'Unknown')}, Run Number: {workflow.get('run_number', 'Unknown')}, View Details: {workflow.get('html_url', '#')}"
-                await self.send_slack_message(message)
+                # Slack notification
+                slack_message = f"Deployment Successful - Workflow: {workflow_name}, Repository: {repo}, Branch: {workflow.get('head_branch', 'Unknown')}, Run Number: {workflow.get('run_number', 'Unknown')}, View Details: {workflow.get('html_url', '#')}"
+                await self.send_slack_message(slack_message)
+                
+                # Gmail notification
+                email_subject = f"✅ Deployment Successful - {repo}"
+                email_message = f"""
+                Deployment Successful
+                
+                A workflow has completed successfully:
+                • Workflow: {workflow_name}
+                • Repository: {repo}
+                • Branch: {workflow.get('head_branch', 'Unknown')}
+                • Run Number: {workflow.get('run_number', 'Unknown')}
+                • View Details: {workflow.get('html_url', '#')}
+                
+                Deployment completed successfully!
+                """
+                await self.send_gmail_message(email_subject, email_message)
     
     async def send_slack_message(self, message: str) -> str:
         """Send message to Slack."""
