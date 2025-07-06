@@ -12,22 +12,133 @@ This server provides three main services in a single unified application:
 2. **MCP (Model Context Protocol) Server** - Exposes tools for LLMs to analyze code and manage workflows
 3. **Multi-Platform Notification System** - Sends alerts to Slack and Gmail for important events
 
-## Real-World LLM Integration
+## Universal LLM Integration
 
-### How LLMs Use This Server
+### Compatible with Any LLM Platform
 
-LLMs (like Claude, GPT-4, etc.) can interact with this server through:
+Your MCP-AutoPRX server can integrate with **virtually any LLM** that supports HTTP APIs or the Model Context Protocol (MCP). This makes it a universal tool provider for AI systems.
 
-1. **MCP Protocol** - Direct integration using the Model Context Protocol
-2. **REST API** - HTTP endpoints for tool calling
-3. **Webhook Processing** - Automatic event handling and notifications
+### Supported LLM Platforms
 
-### Use Cases
+#### **Claude (Anthropic)**
+- **Native MCP Support**: Direct integration via Model Context Protocol
+- **Claude Code**: Built-in support for MCP servers
+- **Command**: `claude-code --mcp-server python unified_server.py`
 
-- **Automated PR Analysis** - LLMs analyze code changes and suggest improvements
-- **CI/CD Monitoring** - Real-time monitoring of build and deployment status
-- **Intelligent Notifications** - AI-powered alert filtering and prioritization
-- **Workflow Automation** - LLMs trigger actions based on GitHub events
+#### **OpenAI GPT Models**
+- **Function Calling**: Use your tools as external functions
+- **HTTP API Integration**: Direct REST API calls
+- **Custom Functions**: Define your tools in GPT function schemas
+
+#### **Google Gemini**
+- **HTTP API Integration**: Call your endpoints directly
+- **External Tools**: Use your server as external service provider
+- **Function Calling**: Similar to GPT integration
+
+#### **Local LLMs (Ollama, etc.)**
+- **HTTP Endpoints**: Universal compatibility via REST APIs
+- **Custom Integrations**: Direct API calls to your tools
+- **External Data**: Access GitHub data through your server
+
+#### **Custom AI Applications**
+- **Any HTTP Client**: Universal web standard compatibility
+- **JSON Communication**: Standard data format support
+- **Authentication**: API key protection for security
+
+### Integration Methods
+
+#### **1. MCP Protocol (Recommended for Claude)**
+```bash
+# Direct MCP integration
+claude-code --mcp-server python unified_server.py
+
+# Claude can then use all your tools:
+# - analyze_file_changes
+# - get_pr_templates
+# - send_slack_notification
+# - send_gmail_notification
+```
+
+#### **2. HTTP REST API (Universal)**
+```python
+import requests
+
+# Get available tools
+response = requests.get(
+    "https://mcp-autoprx-production.up.railway.app/tools",
+    headers={"x-api-key": "your_api_key"}  # Replace with your actual API key
+)
+
+# Execute any tool
+response = requests.post(
+    "https://mcp-autoprx-production.up.railway.app/call/analyze_file_changes",
+    headers={
+        "Content-Type": "application/json",
+        "x-api-key": "your_api_key"  # Replace with your actual API key
+    },
+    json={"arguments": {"base_branch": "main"}}
+)
+```
+
+#### **3. Function Calling (GPT/Gemini)**
+Define your tools as functions for LLM platforms:
+```json
+{
+  "type": "function",
+  "function": {
+    "name": "analyze_file_changes",
+    "description": "Analyze git file changes and generate summaries",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "base_branch": {"type": "string"},
+        "include_diff": {"type": "boolean"},
+        "max_diff_lines": {"type": "integer"}
+      }
+    }
+  }
+}
+```
+
+### Real-World Use Cases
+
+#### **Automated PR Analysis**
+- LLMs analyze code changes and suggest improvements
+- Generate meaningful PR descriptions from cryptic commits
+- Identify potential issues before code review
+
+#### **CI/CD Monitoring**
+- Real-time monitoring of build and deployment status
+- AI-powered failure analysis and suggestions
+- Intelligent alert filtering and prioritization
+
+#### **Workflow Automation**
+- LLMs trigger actions based on GitHub events
+- Automated response to CI failures
+- Smart notification routing
+
+#### **Code Review Assistance**
+- AI-powered code analysis and suggestions
+- Template recommendations based on change types
+- Automated documentation updates
+
+### Why Your Server is Universal
+
+1. **MCP Protocol** - Industry standard for LLM tool integration
+2. **HTTP REST API** - Universal web standard compatibility
+3. **JSON Communication** - Standard data format for all platforms
+4. **Authentication** - API key protection for secure access
+5. **Documentation** - Swagger UI for easy integration
+6. **Cloud Deployment** - Always available via Railway
+
+### Getting Started with LLM Integration
+
+1. **Get Your API Key**: Set `MCP_API_KEY` environment variable in Railway
+2. **Choose Integration Method**: MCP for Claude, HTTP for others
+3. **Test Connection**: Use the `/tools` endpoint to verify
+4. **Start Building**: Integrate tools into your LLM workflows
+
+**Your server is essentially a universal LLM tool provider that works with any AI system!**
 
 **MCP-AutoPRX** is an intelligent GitHub automation server built using Claude and the Model Context Protocol (MCP). It helps teams:
 
@@ -137,14 +248,14 @@ MCP-AutoPRX/
 
 2. **Use REST API**
    ```bash
-   curl -H "x-api-key: your_api_key" \
+   curl -H "x-api-key: YOUR_API_KEY" \
         https://mcp-autoprx-production.up.railway.app/tools
    ```
 
 3. **Call Tools Directly**
    ```bash
    curl -X POST https://mcp-autoprx-production.up.railway.app/call/analyze_file_changes \
-     -H "x-api-key: your_api_key" \
+     -H "x-api-key: YOUR_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{"arguments": {"base_branch": "main"}}'
    ```
@@ -160,7 +271,7 @@ MCP-AutoPRX/
    GMAIL_USER=your_email@gmail.com
    GMAIL_APP_PASSWORD=your_app_password
    DEFAULT_EMAIL_RECIPIENT=recipient@example.com
-   MCP_API_KEY=your_secure_api_key
+   MCP_API_KEY=your_secure_api_key  # Generate a secure random key
    GITHUB_WEBHOOK_SECRET=your_webhook_secret
    ```
 
@@ -299,7 +410,7 @@ curl -X POST https://mcp-autoprx-production.up.railway.app/webhook/github \
    railway variables set GMAIL_USER=your_email
    railway variables set GMAIL_APP_PASSWORD=your_password
    railway variables set DEFAULT_EMAIL_RECIPIENT=recipient@example.com
-   railway variables set MCP_API_KEY=your_api_key
+   railway variables set MCP_API_KEY=your_api_key  # Generate a secure random key
    railway variables set GITHUB_WEBHOOK_SECRET=your_secret
    ```
 
@@ -403,7 +514,3 @@ For any queries, support, or feature requests:
 - **Live Server**: https://mcp-autoprx-production.up.railway.app
 - **Health Check**: https://mcp-autoprx-production.up.railway.app/health
 - **API Documentation**: https://mcp-autoprx-production.up.railway.app/docs
-
----
-
-**Last Updated**: December 2024 - Production deployment with full CI/CD integration
