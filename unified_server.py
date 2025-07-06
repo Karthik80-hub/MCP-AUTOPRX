@@ -125,8 +125,11 @@ class UnifiedServer:
             expected_api_key = os.getenv("MCP_API_KEY")
             
             if not expected_api_key:
-                # If no API key is set, allow access (for development)
-                return await call_next(request)
+                # Require API key even in production - no fallback for security
+                raise HTTPException(
+                    status_code=500,
+                    detail="MCP_API_KEY environment variable not set. Please configure API key for security."
+                )
             
             if not api_key or api_key != expected_api_key:
                 raise HTTPException(
