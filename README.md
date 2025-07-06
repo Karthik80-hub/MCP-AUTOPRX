@@ -1,276 +1,409 @@
-# MCP-AutoPRX Production Server
+# MCP-AutoPRX: Automated GitHub PR & CI Monitor
 
-A production-ready MCP (Model Context Protocol) server for automated PR analysis, CI/CD monitoring, and multi-platform notifications. Deployed on Railway for 24/7 availability.
+## What is MCP-AutoPRX?
+
+**MCP-AutoPRX** is a production-ready unified server that combines GitHub automation, CI/CD monitoring, and LLM integration using the Model Context Protocol (MCP). It serves as a bridge between GitHub events and AI-powered analysis, enabling intelligent automation of development workflows.
+
+## What Does This Server Do?
+
+This server provides three main services in a single unified application:
+
+1. **GitHub Webhook Handler** - Receives and processes GitHub events (pushes, PRs, CI/CD runs)
+2. **MCP (Model Context Protocol) Server** - Exposes tools for LLMs to analyze code and manage workflows
+3. **Multi-Platform Notification System** - Sends alerts to Slack and Gmail for important events
+
+## Real-World LLM Integration
+
+### How LLMs Use This Server
+
+LLMs (like Claude, GPT-4, etc.) can interact with this server through:
+
+1. **MCP Protocol** - Direct integration using the Model Context Protocol
+2. **REST API** - HTTP endpoints for tool calling
+3. **Webhook Processing** - Automatic event handling and notifications
+
+### Use Cases
+
+- **Automated PR Analysis** - LLMs analyze code changes and suggest improvements
+- **CI/CD Monitoring** - Real-time monitoring of build and deployment status
+- **Intelligent Notifications** - AI-powered alert filtering and prioritization
+- **Workflow Automation** - LLMs trigger actions based on GitHub events
+
+**MCP-AutoPRX** is an intelligent GitHub automation server built using Claude and the Model Context Protocol (MCP). It helps teams:
+
+* Automatically generate meaningful PR descriptions
+* Detect and notify about CI/CD failures via Slack and Gmail
+* Run an end-to-end automation pipeline with Claude as the brain
+
+**Live Server**: https://mcp-autoprx-production.up.railway.app
+
+**Health Check**: https://mcp-autoprx-production.up.railway.app/health
+
+**API Documentation**: https://mcp-autoprx-production.up.railway.app/docs
+
+---
 
 ## Features
 
-- GitHub webhook event handling
-- Automated PR analysis and file change detection
-- Smart PR template suggestions based on change type
-- CI/CD workflow monitoring
-- Slack and Gmail notifications
-- MCP protocol compliance
-- Production-ready FastAPI server
-- Railway cloud deployment
+* Analyze git diffs and generate detailed change summaries
+* Capture GitHub Action events in real time via webhooks
+* Provide intelligent PR template suggestions based on change types
+* Notify teams of CI failures on Slack or via Gmail
+* Railway cloud deployment with 24/7 availability
+* Integrates with Claude Code for prompt-driven automation
+* Production-ready security with API key protection
+* Comprehensive monitoring and health checks
 
-## Quick Start
+## Solve PR Chaos
 
-### Local Development
+Transform cryptic pull requests like "stuff" and "more changes" into clear, actionable descriptions. Your server analyzes code changes and helps LLMs generate meaningful PR descriptions that reviewers can actually understand.
 
-1. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+---
 
-2. Set environment variables:
-```bash
-export SLACK_WEBHOOK_URL=your_slack_webhook_url
-export GMAIL_USER=your_email@gmail.com
-export GMAIL_APP_PASSWORD=your_gmail_app_password
-export DEFAULT_EMAIL_RECIPIENT=recipient@example.com
-```
+## Technical Stack
 
-3. Run the unified server:
-```bash
-python unified_server.py
-```
+### Backend
+- **Framework**: FastAPI
+- **MCP Library**: FastMCP
+- **Language**: Python 3.10+
+- **Server**: Uvicorn ASGI
+- **Deployment**: Railway Cloud Platform
 
-### Railway Deployment
+### AI/ML Integration
+- **Model Context Protocol (MCP)**: Core LLM integration
+- **Claude Integration**: Direct Claude Code support
+- **Git Analysis**: Advanced git diff processing
+- **Template Intelligence**: AI-powered template suggestions
 
-1. Install Railway CLI:
-```bash
-npm install -g @railway/cli
-```
+### Infrastructure
+- **Cloud Platform**: Railway
+- **CI/CD**: GitHub Actions
+- **Database**: JSON file storage (github_events.json)
+- **Security**: API key authentication, GitHub webhook verification
+- **SSL/TLS**: Automatic HTTPS via Railway
 
-2. Deploy to Railway:
-```bash
-railway login
-railway init
-railway up
-```
+### External Integrations
+- **GitHub Webhooks**: Real-time event processing
+- **Slack API**: Notification delivery
+- **Gmail SMTP**: Email notifications
+- **Git Commands**: Local git analysis
 
-3. Set environment variables in Railway dashboard:
-```
-SLACK_WEBHOOK_URL=your_slack_webhook_url
-GMAIL_USER=your_email@gmail.com
-GMAIL_APP_PASSWORD=your_gmail_app_password
-DEFAULT_EMAIL_RECIPIENT=recipient@example.com
-GITHUB_WEBHOOK_SECRET=your_webhook_secret
-```
-
-4. Configure GitHub webhooks:
-   - URL: `https://your-app-name.up.railway.app/webhook/github`
-   - Content type: `application/json`
-   - Secret: (same as GITHUB_WEBHOOK_SECRET)
-
-## Server Endpoints
-
-- `GET /` - Server information
-- `GET /health` - Health check
-- `GET /tools` - List available tools
-- `POST /webhook/github` - GitHub webhook handler
-- `POST /mcp` - MCP protocol endpoint
-- `POST /call/{tool_name}` - Direct tool calling
-
-## Available Tools
-
-### PR Analysis Tools
-- `analyze_file_changes` - Analyze git file changes and generate summaries
-- `get_pr_templates` - Get available PR templates with metadata
-
-### CI/CD Monitoring Tools
-- `get_recent_actions_events` - Get recent GitHub Actions events
-- `get_workflow_status` - Get current status of GitHub Actions workflows
-- `get_documentation_workflow_status` - Get status of documentation-related workflows
-- `get_failed_workflows` - Get only failed workflows for troubleshooting
-
-### Notification Tools
-- `send_slack_notification` - Send Slack notification
-- `send_gmail_notification` - Send Gmail notification
-
-## Environment Variables
-
-### Required
-- `SLACK_WEBHOOK_URL` - Slack webhook URL
-- `GMAIL_USER` - Gmail address
-- `GMAIL_APP_PASSWORD` - Gmail app password
-- `DEFAULT_EMAIL_RECIPIENT` - Default email recipient
-
-### Optional
-- `GITHUB_WEBHOOK_SECRET` - GitHub webhook secret
-- `PORT` - Server port (Railway sets automatically)
+---
 
 ## Project Structure
 
 ```
 MCP-AutoPRX/
-├── unified_server.py      # Main production server
-├── railway.json          # Railway deployment config
+├── unified_server.py      # Main FastAPI server with all endpoints
+├── railway.json          # Railway deployment configuration
 ├── requirements.txt      # Python dependencies
 ├── github_events.json   # GitHub events storage
 ├── mcp-server/          # MCP server components
-│   ├── tools/           # MCP tools
-│   ├── prompts/         # AI prompts
-│   └── mcp_instance.py  # MCP instance
+│   ├── tools/           # MCP tools implementation
+│   │   ├── pr_analysis.py      # Git analysis and PR tools
+│   │   ├── ci_monitor.py       # CI/CD monitoring tools
+│   │   ├── slack_notifier.py   # Slack notification tools
+│   │   └── gmail_notifier.py   # Gmail notification tools
+│   ├── prompts/         # AI prompts and templates
+│   │   ├── pr_prompts.py       # PR-related prompts
+│   │   ├── ci_prompts.py       # CI/CD prompts
+│   │   └── review_prompts.py   # Code review prompts
+│   └── mcp_instance.py  # Shared MCP instance
 ├── templates/           # PR templates
+│   ├── bug.md          # Bug fix template
+│   ├── feature.md      # Feature template
+│   ├── docs.md         # Documentation template
+│   ├── refactor.md     # Refactor template
+│   ├── test.md         # Test template
+│   ├── performance.md  # Performance template
+│   └── security.md     # Security template
 ├── test/               # Test suite
+│   ├── test_server.py  # Server tests
+│   ├── test_pr_analysis.py  # PR analysis tests
+│   ├── test_ci_monitor.py   # CI monitoring tests
+│   └── test_slack_notifier.py  # Notification tests
 └── .github/workflows/   # CI/CD workflows
-    ├── build_documentation.yml      # Main CI/CD pipeline
-    ├── upload_pr_documentation.yml  # Deployment preparation
-    └── build_pr_documentation.yml   # PR testing
 ```
+
+---
+
+## Usage
+
+### For LLM Developers
+1. **Connect via MCP Protocol**
+   ```bash
+   claude-code --mcp-server python unified_server.py
+   ```
+
+2. **Use REST API**
+   ```bash
+   curl -H "x-api-key: your_api_key" \
+        https://mcp-autoprx-production.up.railway.app/tools
+   ```
+
+3. **Call Tools Directly**
+   ```bash
+   curl -X POST https://mcp-autoprx-production.up.railway.app/call/analyze_file_changes \
+     -H "x-api-key: your_api_key" \
+     -H "Content-Type: application/json" \
+     -d '{"arguments": {"base_branch": "main"}}'
+   ```
+
+### For DevOps Teams
+1. **Configure GitHub Webhooks**
+   - URL: `https://mcp-autoprx-production.up.railway.app/webhook/github`
+   - Events: push, pull_request, workflow_run, check_suite, status, deployment_status
+
+2. **Set Environment Variables**
+   ```bash
+   SLACK_WEBHOOK_URL=your_slack_webhook
+   GMAIL_USER=your_email@gmail.com
+   GMAIL_APP_PASSWORD=your_app_password
+   DEFAULT_EMAIL_RECIPIENT=recipient@example.com
+   MCP_API_KEY=your_secure_api_key
+   GITHUB_WEBHOOK_SECRET=your_webhook_secret
+   ```
+
+3. **Monitor Health**
+   ```bash
+   curl https://mcp-autoprx-production.up.railway.app/health
+   ```
+
+### For Development Teams
+1. **Analyze Code Changes**
+   - Use `analyze_file_changes` to understand what changed
+   - Get detailed git diffs and commit history
+   - Understand file modifications and impact
+
+2. **Get PR Templates**
+   - Use `get_pr_templates` to see available templates
+   - Use `suggest_template` for AI-powered recommendations
+   - Generate meaningful PR descriptions
+
+3. **Monitor CI/CD**
+   - Track workflow status with `get_workflow_status`
+   - Get recent events with `get_recent_actions_events`
+   - Monitor failed workflows with `get_failed_workflows`
+
+---
+
+## Development
+
+### Key Components
+
+#### Core Server (`unified_server.py`)
+- **FastAPI Application**: Main server with all endpoints
+- **MCP Integration**: FastMCP server for LLM tools
+- **Webhook Handler**: GitHub event processing
+- **Notification System**: Slack and Gmail integration
+- **Security Middleware**: API key protection
+
+#### MCP Tools (`mcp-server/tools/`)
+- **PR Analysis Tools**: Git analysis and template suggestions
+- **CI/CD Monitoring**: Workflow status tracking
+- **Notification Tools**: Slack and Gmail message sending
+- **Event Processing**: GitHub webhook data handling
+
+#### AI Prompts (`mcp-server/prompts/`)
+- **PR Prompts**: Template suggestion logic
+- **CI Prompts**: Workflow analysis prompts
+- **Review Prompts**: Code review assistance
+
+### Database Schema
+- **GitHub Events**: Stored in `github_events.json`
+- **Event Structure**: Timestamp, event type, repository, sender, full data
+- **Storage Limit**: Last 100 events kept
+- **Data Format**: JSON with full event details
+
+### API Endpoints
+- **Public**: `/`, `/health`, `/docs`, `/webhook/github`
+- **Protected**: `/tools`, `/mcp`, `/call/{tool_name}`, `/test-email`
+- **Authentication**: API key required for protected endpoints
+
+---
+
+## Security
+
+### Authentication
+- **API Key Protection**: Sensitive endpoints require `x-api-key` header
+- **GitHub Webhook Verification**: HMAC-SHA256 signature validation
+- **Environment Variables**: Secure storage in Railway
+
+### Best Practices
+- **Strong API Keys**: 32+ character random keys
+- **Webhook Secrets**: Unique secrets for each repository
+- **HTTPS Only**: Automatic SSL/TLS via Railway
+- **Input Validation**: All webhook data validated
+- **Error Handling**: Secure error responses
+
+### Security Checklist
+- [ ] API key set and used
+- [ ] GitHub webhook secret configured
+- [ ] Environment variables secured
+- [ ] HTTPS enabled
+- [ ] No credentials in code
+- [ ] Input validation implemented
+- [ ] Access logging enabled
+
+---
 
 ## Testing
 
-Run the test suite:
+### Automated Testing
 ```bash
+# Run all tests
 python -m pytest test/ -v
-```
 
-Test individual components:
-```bash
+# Test specific components
 python -m pytest test/test_server.py -v
 python -m pytest test/test_pr_analysis.py -v
 python -m pytest test/test_ci_monitor.py -v
 python -m pytest test/test_slack_notifier.py -v
 ```
 
-Run async tests:
+### Manual Testing
 ```bash
-python -m pytest test/ -m asyncio
+# Test health endpoint
+curl https://mcp-autoprx-production.up.railway.app/health
+
+# Test Gmail functionality
+curl https://mcp-autoprx-production.up.railway.app/test-email
+
+# Test webhook with sample data
+curl -X POST https://mcp-autoprx-production.up.railway.app/webhook/github \
+  -H "Content-Type: application/json" \
+  -H "X-GitHub-Event: workflow_run" \
+  -d '{"action": "completed", "workflow_run": {...}}'
 ```
 
-## CI/CD Pipeline
+---
 
-This project uses GitHub Actions for continuous integration and deployment. The CI/CD pipeline ensures code quality, automated testing, and seamless deployment to Railway.
+## Deployment
 
-### GitHub Actions Workflows
+### Railway Deployment
+1. **Install Railway CLI**
+   ```bash
+   npm install -g @railway/cli
+   ```
 
-#### 1. Build Documentation (`build_documentation.yml`)
-**Purpose**: Main CI/CD pipeline for comprehensive testing and validation.
+2. **Deploy to Railway**
+   ```bash
+   railway login
+   railway init
+   railway up
+   ```
 
-**Triggers**:
-- Push to main branch
-- Pull requests to main branch
+3. **Configure Environment Variables**
+   ```bash
+   railway variables set SLACK_WEBHOOK_URL=your_url
+   railway variables set GMAIL_USER=your_email
+   railway variables set GMAIL_APP_PASSWORD=your_password
+   railway variables set DEFAULT_EMAIL_RECIPIENT=recipient@example.com
+   railway variables set MCP_API_KEY=your_api_key
+   railway variables set GITHUB_WEBHOOK_SECRET=your_secret
+   ```
 
-**What it does**:
-- Sets up Python 3.10 environment
-- Installs all dependencies including test packages
-- Runs comprehensive test suite with verbose output
-- Validates server health and readiness
-- Ensures code quality before deployment
-
-**Key Features**:
-- Early failure detection (`-x` flag stops on first failure)
-- Comprehensive dependency installation
-- Server health validation
-- Documentation build verification
-
-#### 2. Deploy Preparation (`upload_pr_documentation.yml`)
-**Purpose**: Prepares and validates the project for Railway deployment.
-
-**Triggers**:
-- Push to main branch only
-
-**What it does**:
-- Validates server configuration files
-- Checks Railway configuration presence
-- Prepares deployment environment
-- Ensures all required files are present
-
-**Key Features**:
-- Server file validation (`unified_server.py`)
-- Railway configuration verification (`railway.json`)
-- Deployment readiness confirmation
-- Environment validation
-
-#### 3. PR Testing (`build_pr_documentation.yml`)
-**Purpose**: Comprehensive testing for pull requests.
-
-**Triggers**:
-- Pull requests to main branch only
-
-**What it does**:
-- Runs PR-specific test suite
-- Validates code quality
-- Ensures PR meets quality standards
-- Provides feedback before merge
-
-**Key Features**:
-- PR-specific testing environment
-- Code quality validation
-- Early feedback for contributors
-- Prevents breaking changes
-
-### Workflow Configuration
-
-All workflows use:
-- **Python 3.10**: Required for MCP compatibility
-- **Ubuntu Latest**: Consistent CI environment
-- **Comprehensive Dependencies**: All test and runtime dependencies
-- **Verbose Output**: Detailed error reporting for debugging
-
-### Workflow Commands
-
-Monitor workflow status:
+### Local Development
 ```bash
-# Check all workflow runs
-gh run list
+# Install dependencies
+pip install -r requirements.txt
 
-# View specific workflow logs
-gh run view <run-id>
+# Set environment variables
+export SLACK_WEBHOOK_URL=your_url
+export GMAIL_USER=your_email
+export GMAIL_APP_PASSWORD=your_password
+export DEFAULT_EMAIL_RECIPIENT=recipient@example.com
 
-# Rerun failed workflow
-gh run rerun <run-id>
-
-# Check specific workflow
-gh run list --workflow=build_documentation.yml
+# Run server
+python unified_server.py
 ```
 
-### CI/CD Benefits
-
-- **Automated Quality Assurance**: Every push and PR is automatically tested
-- **Early Issue Detection**: Problems are caught before they reach production
-- **Consistent Environment**: All tests run in the same environment
-- **Deployment Safety**: Server configuration is validated before deployment
-- **Developer Experience**: Immediate feedback on code changes
-
-## Railway Configuration
-
-The `railway.json` file configures:
-- Build process using Nixpacks
-- Start command: `python unified_server.py`
-- Health check endpoint: `/health`
-- Automatic restart on failure
-- Maximum 10 retry attempts
-
-## Security Considerations
-
-- Webhook secret validation
-- Environment variable protection
-- CORS configuration for production
-- Rate limiting (consider implementing)
-- HTTPS provided by Railway
-
-## Documentation
-
-This project includes comprehensive documentation:
-
-- **README.md** - This file, project overview and quick start
-- **PROJECT_KNOWLEDGE_BASE.md** - Comprehensive project knowledge and architecture
-- **QUICK_REFERENCE.md** - Quick commands and API reference
-- **TROUBLESHOOTING_GUIDE.md** - Common issues and solutions
+---
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+We welcome contributions to MCP-AutoPRX! Here's how you can help:
 
-**Note**: All pull requests are automatically tested by the CI/CD pipeline before merging.
+### Development Setup
+1. **Fork the repository**
+2. **Clone your fork**
+   ```bash
+   git clone https://github.com/yourusername/MCP-AutoPRX.git
+   cd MCP-AutoPRX
+   ```
+
+3. **Create a feature branch**
+   ```bash
+   git checkout -b feature/AmazingFeature
+   ```
+
+4. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. **Make your changes**
+   - Follow the existing code style
+   - Add tests for new functionality
+   - Update documentation as needed
+
+6. **Test your changes**
+   ```bash
+   python -m pytest test/ -v
+   ```
+
+7. **Commit and push**
+   ```bash
+   git add .
+   git commit -m 'Add some AmazingFeature'
+   git push origin feature/AmazingFeature
+   ```
+
+8. **Open a Pull Request**
+
+### Contribution Guidelines
+- **Code Style**: Follow PEP 8 Python guidelines
+- **Testing**: Add tests for new features
+- **Documentation**: Update README.md and docstrings
+- **Security**: Follow security best practices
+- **Performance**: Consider impact on response times
+
+---
 
 ## License
 
-MIT License - see LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## Author
+
+**Karthik Chunchu** - AI/ML Engineer & Full Stack Developer
+- **GitHub**: [@Karthik80-hub](https://github.com/Karthik80-hub)
+- **Live Demo**: [MCP-AutoPRX Server](https://mcp-autoprx-production.up.railway.app)
+
+---
+
+## Acknowledgments
+
+- **FastAPI** framework and community
+- **FastMCP** library for MCP implementation
+- **Railway** for cloud deployment
+- **GitHub** for webhook infrastructure
+- **Claude** and **Anthropic** for LLM integration
+- **OpenAI** for GPT integration support
+- All contributors to the project
+
+---
+
+## Contact
+
+For any queries, support, or feature requests:
+- **GitHub Issues**: Open an issue in the repository
+- **Live Server**: https://mcp-autoprx-production.up.railway.app
+- **Health Check**: https://mcp-autoprx-production.up.railway.app/health
+- **API Documentation**: https://mcp-autoprx-production.up.railway.app/docs
+
+---
+
+**Last Updated**: December 2024 - Production deployment with full CI/CD integration

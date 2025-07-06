@@ -99,7 +99,7 @@ class UnifiedServer:
         self.setup_mcp_tools()
         
     def setup_middleware(self):
-        """Setup CORS for cloud access."""
+        """Setup CORS and security middleware."""
         self.app.add_middleware(
             CORSMiddleware,
             allow_origins=["*"],
@@ -107,6 +107,34 @@ class UnifiedServer:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+        
+        # Add API key protection middleware
+        @self.app.middleware("http")
+        async def verify_api_key(request: Request, call_next):
+            # Skip API key check for public endpoints
+            public_endpoints = ["/", "/health", "/docs", "/openapi.json"]
+            if request.url.path in public_endpoints:
+                return await call_next(request)
+            
+            # Skip API key check for GitHub webhooks (they have their own security)
+            if request.url.path == "/webhook/github":
+                return await call_next(request)
+            
+            # Require API key for all other endpoints
+            api_key = request.headers.get("x-api-key")
+            expected_api_key = os.getenv("MCP_API_KEY")
+            
+            if not expected_api_key:
+                # If no API key is set, allow access (for development)
+                return await call_next(request)
+            
+            if not api_key or api_key != expected_api_key:
+                raise HTTPException(
+                    status_code=403, 
+                    detail="API key required. Set x-api-key header."
+                )
+            
+            return await call_next(request)
     
     def setup_routes(self):
         """Setup HTTP routes for both webhooks and LLM access."""
@@ -221,9 +249,9 @@ class UnifiedServer:
                 default_recipient = os.getenv("DEFAULT_EMAIL_RECIPIENT", "").strip()
                 
                 env_check = {
-                    "GMAIL_USER": "✅ Set" if gmail_user else "❌ Missing",
-                    "GMAIL_APP_PASSWORD": "✅ Set" if gmail_password else "❌ Missing",
-                    "DEFAULT_EMAIL_RECIPIENT": "✅ Set" if default_recipient else "❌ Missing"
+                    "GMAIL_USER": "Set" if gmail_user else "Missing",
+                    "GMAIL_APP_PASSWORD": "Set" if gmail_password else "Missing",
+                    "DEFAULT_EMAIL_RECIPIENT": "Set" if default_recipient else "Missing"
                 }
                 
                 if not all([gmail_user, gmail_password, default_recipient]):
@@ -234,7 +262,7 @@ class UnifiedServer:
                     }
                 
                 # Test email
-                subject = "🔧 MCP Email Test"
+                subject = "MCP Email Test"
                 message = f"""
                 This is a test email from the MCP-AutoPRX server via Railway.
                 
@@ -253,7 +281,7 @@ class UnifiedServer:
                 # Also try sending to the sender email to test
                 if gmail_user != default_recipient:
                     test_result = await self.send_gmail_message(
-                        f"🔧 Self-Test: {subject}", 
+                        f"Self-Test: {subject}", 
                         f"Self-test email: {message}", 
                         gmail_user
                     )
@@ -282,7 +310,30 @@ class UnifiedServer:
         async def github_webhook(request: Request):
             """Handle GitHub webhooks - combines webhook server functionality."""
             try:
-                # Get raw body first to debug
+                # Verify GitHub webhook signature if secret is set
+                webhook_secret = os.getenv("GITHUB_WEBHOOK_SECRET")
+                if webhook_secret:
+                    import hmac
+                    import hashlib
+                    
+                    signature = request.headers.get("x-hub-signature-256")
+                    if not signature:
+                        raise HTTPException(status_code=401, detail="Missing signature")
+                    
+                    # Verify signature
+                    expected_signature = "sha256=" + hmac.new(
+                        webhook_secret.encode(),
+                        await request.body(),
+                        hashlib.sha256
+                    ).hexdigest()
+                    
+                    if not hmac.compare_digest(signature, expected_signature):
+                        raise HTTPException(status_code=401, detail="Invalid signature")
+                    
+                    # Reset body for processing
+                    await request.body()
+                
+                # Get raw body for processing
                 body = await request.body()
                 if not body:
                     print("Warning: Empty webhook body received")
@@ -489,7 +540,7 @@ class UnifiedServer:
                 await self.send_slack_message(slack_message)
                 
                 # Gmail notification
-                email_subject = f"🚨 CI Failure Alert - {repo}"
+                email_subject = f"CI Failure Alert - {repo}"
                 email_message = f"""
                 CI Failure Alert
                 
@@ -502,9 +553,7 @@ class UnifiedServer:
                 
                 Please check the logs and address any issues.
                 """
-                print(f"Attempting to send Gmail notification: {email_subject}")
-                gmail_result = await self.send_gmail_message(email_subject, email_message)
-                print(f"Gmail notification result: {gmail_result}")
+                await self.send_gmail_message(email_subject, email_message)
                 
             elif conclusion == "success":
                 # Slack notification
@@ -512,7 +561,7 @@ class UnifiedServer:
                 await self.send_slack_message(slack_message)
                 
                 # Gmail notification
-                email_subject = f"✅ Deployment Successful - {repo}"
+                email_subject = f"Deployment Successful - {repo}"
                 email_message = f"""
                 Deployment Successful
                 
@@ -525,9 +574,7 @@ class UnifiedServer:
                 
                 Deployment completed successfully!
                 """
-                print(f"Attempting to send Gmail notification: {email_subject}")
-                gmail_result = await self.send_gmail_message(email_subject, email_message)
-                print(f"Gmail notification result: {gmail_result}")
+                await self.send_gmail_message(email_subject, email_message)
     
     async def send_slack_message(self, message: str) -> str:
         """Send message to Slack."""
@@ -547,25 +594,18 @@ class UnifiedServer:
     
     async def send_gmail_message(self, subject: str, message: str, recipient: str = None) -> str:
         """Send message via Gmail."""
-        gmail_user = os.getenv("GMAIL_USER", "").strip()
-        gmail_password = os.getenv("GMAIL_APP_PASSWORD", "").strip()
-        default_recipient = os.getenv("DEFAULT_EMAIL_RECIPIENT", "").strip()
-        
-        print(f"Gmail debug - User: {gmail_user[:10]}..., Password: {'Set' if gmail_password else 'Not set'}, Default recipient: {default_recipient}")
+        gmail_user = os.getenv("GMAIL_USER")
+        gmail_password = os.getenv("GMAIL_APP_PASSWORD")
+        default_recipient = os.getenv("DEFAULT_EMAIL_RECIPIENT")
         
         if not gmail_user or not gmail_password:
-            error_msg = "Error: GMAIL_USER and GMAIL_APP_PASSWORD not set"
-            print(f"Gmail error: {error_msg}")
-            return error_msg
+            return "Error: GMAIL_USER and GMAIL_APP_PASSWORD not set"
         
         recipient = recipient or default_recipient
         if not recipient:
-            error_msg = "Error: No recipient email specified"
-            print(f"Gmail error: {error_msg}")
-            return error_msg
+            return "Error: No recipient email specified"
         
         try:
-            print(f"Gmail: Creating email message to {recipient}")
             msg = MIMEMultipart()
             msg['From'] = gmail_user
             msg['To'] = recipient
@@ -588,24 +628,17 @@ class UnifiedServer:
             
             msg.attach(MIMEText(html_body, 'html'))
             
-            print(f"Gmail: Connecting to SMTP server")
             server = smtplib.SMTP('smtp.gmail.com', 587)
             server.starttls()
-            print(f"Gmail: Logging in with user {gmail_user}")
             server.login(gmail_user, gmail_password)
-            print(f"Gmail: Sending email")
             text = msg.as_string()
             server.sendmail(gmail_user, recipient, text)
             server.quit()
             
-            success_msg = f"Gmail sent successfully to {recipient}"
-            print(f"Gmail: {success_msg}")
-            return success_msg
+            return f"Gmail sent successfully to {recipient}"
             
         except Exception as e:
-            error_msg = f"Gmail error: {str(e)}"
-            print(f"Gmail exception: {error_msg}")
-            return error_msg
+            return f"Gmail error: {str(e)}"
     
     def run(self):
         """Run the unified server."""

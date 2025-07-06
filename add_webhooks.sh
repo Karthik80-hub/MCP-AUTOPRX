@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WEBHOOK_URL="https://dash-fight-package-telecharger.trycloudflare.com/webhook/github"
+WEBHOOK_URL="https://mcp-autoprx-production.up.railway.app/webhook/github"
 USERNAME="Karthik80-hub"
 
 echo "Updating/Creating MCP webhook for all repositories"
@@ -28,13 +28,9 @@ for repo in $REPOS; do
     gh api -X PATCH repos/$USERNAME/$repo/hooks/$webhook_id \
       -f name="web" \
       -F active=true \
-      -F events[]=push \
-      -F events[]=pull_request \
-      -F events[]=issues \
-      -F events[]=workflow_run \
-      -F events[]=check_run \
+      -F events[]=* \
       -F config[url]="$WEBHOOK_URL" \
-      -F config[content_type]=json \
+      -F config[content_type]=application/json \
       --silent
     if [[ $? -eq 0 ]]; then
               echo "Webhook updated for $repo"
@@ -46,13 +42,9 @@ for repo in $REPOS; do
     gh api -X POST repos/$USERNAME/$repo/hooks \
       -f name="web" \
       -F active=true \
-      -F events[]=push \
-      -F events[]=pull_request \
-      -F events[]=issues \
-      -F events[]=workflow_run \
-      -F events[]=check_run \
+      -F events[]=* \
       -F config[url]="$WEBHOOK_URL" \
-      -F config[content_type]=json \
+      -F config[content_type]=application/json \
       --silent
     if [[ $? -eq 0 ]]; then
               echo "Webhook created for $repo"
