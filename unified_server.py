@@ -45,6 +45,10 @@ try:
     # Add the mcp-server directory to Python path
     sys.path.append(os.path.join(os.path.dirname(__file__), 'mcp-server'))
     
+    # Import the shared MCP instance first
+    from mcp_instance import mcp
+    
+    # Import tools and prompts (this will register them with the shared mcp instance)
     from tools.pr_analysis import analyze_file_changes, get_pr_templates
     from tools.ci_monitor import (
         get_recent_actions_events, 
@@ -78,10 +82,12 @@ class UnifiedServer:
         
         self.app = FastAPI(title="MCP-AutoPRX Unified Server", version="1.0.0")
         
-        # Initialize MCP only if available
+        # Use the shared MCP instance
         if MCP_AVAILABLE and MCP_TOOLS_AVAILABLE:
             try:
-                self.mcp = FastMCP("unified-pr-agent")
+                # Use the shared mcp instance from mcp_instance.py
+                self.mcp = mcp
+                print("Using shared MCP instance with registered tools")
             except Exception as e:
                 print(f"Warning: MCP initialization failed: {e}")
                 self.mcp = None
@@ -130,6 +136,12 @@ class UnifiedServer:
                     "webhook": "active",
                     "notifications": "active",
                     "mcp": "active" if MCP_AVAILABLE else "disabled"
+                },
+                "mcp_debug": {
+                    "mcp_available": MCP_AVAILABLE,
+                    "mcp_tools_available": MCP_TOOLS_AVAILABLE,
+                    "mcp_instance": self.mcp is not None,
+                    "registered_tools": len(self.mcp.tools) if self.mcp else 0
                 }
             }
         
@@ -139,54 +151,24 @@ class UnifiedServer:
             if not MCP_AVAILABLE:
                 return {"error": "MCP not available"}
             
-            tools = [
-                {
-                    "name": "analyze_file_changes",
-                    "description": "Analyze git file changes and generate summaries",
-                    "parameters": ["base_branch", "include_diff", "max_diff_lines"]
-                },
-                {
-                    "name": "get_pr_templates",
-                    "description": "Get available PR templates for different change types",
-                    "parameters": []
-                },
-                {
-                    "name": "suggest_template",
-                    "description": "Suggest appropriate PR template based on changes",
-                    "parameters": ["changes_summary", "change_type"]
-                },
-                {
-                    "name": "get_recent_actions_events",
-                    "description": "Get recent GitHub Actions events",
-                    "parameters": ["limit"]
-                },
-                {
-                    "name": "get_workflow_status",
-                    "description": "Get current status of GitHub Actions workflows",
-                    "parameters": ["workflow_name"]
-                },
-                {
-                    "name": "get_documentation_workflow_status",
-                    "description": "Get status of documentation-related workflows",
-                    "parameters": []
-                },
-                {
-                    "name": "get_failed_workflows",
-                    "description": "Get only failed workflows for troubleshooting",
-                    "parameters": []
-                },
-                {
-                    "name": "send_slack_notification",
-                    "description": "Send Slack notification",
-                    "parameters": ["message"]
-                },
-                {
-                    "name": "send_gmail_notification",
-                    "description": "Send Gmail notification",
-                    "parameters": ["subject", "message", "recipient"]
-                }
-            ]
-            return {"tools": tools}
+            if not self.mcp:
+                return {"error": "MCP instance not initialized"}
+            
+            # Get actual tools registered with MCP instance
+            tools = []
+            for tool_name, tool_info in self.mcp.tools.items():
+                tools.append({
+                    "name": tool_name,
+                    "description": tool_info.get("description", "No description available"),
+                    "parameters": list(tool_info.get("inputSchema", {}).get("properties", {}).keys())
+                })
+            
+            return {
+                "tools": tools,
+                "total_tools": len(tools),
+                "mcp_available": MCP_AVAILABLE,
+                "mcp_initialized": self.mcp is not None
+            }
         
         @self.app.post("/webhook/github")
         async def github_webhook(request: Request):
@@ -319,182 +301,15 @@ class UnifiedServer:
     
     def setup_mcp_tools(self):
         """Setup MCP tools for LLM access."""
-        if not MCP_AVAILABLE or not MCP_TOOLS_AVAILABLE:
+        if not self.mcp:
+            print("MCP not available, skipping tool setup")
             return
-            
-        # PR Analysis Tools
-        @self.mcp.tool()
-        async def analyze_file_changes(base_branch: str = "main", include_diff: bool = True, max_diff_lines: int = 500) -> str:
-            """Analyze git file changes."""
-            try:
-                import subprocess
-                result = subprocess.run(
-                    ["git", "diff", "--stat", f"{base_branch}...HEAD"],
-                    capture_output=True, text=True
-                )
-                return json.dumps({
-                    "stats": result.stdout,
-                    "base_branch": base_branch,
-                    "include_diff": include_diff
-                })
-            except Exception as e:
-                return json.dumps({"error": str(e)})
         
-        @self.mcp.tool()
-        async def get_pr_templates() -> str:
-            """Get available PR templates."""
-            templates = [
-                {"name": "bug.md", "type": "Bug Fix"},
-                {"name": "feature.md", "type": "Feature"},
-                {"name": "docs.md", "type": "Documentation"},
-                {"name": "refactor.md", "type": "Refactor"},
-                {"name": "test.md", "type": "Test"},
-                {"name": "performance.md", "type": "Performance"},
-                {"name": "security.md", "type": "Security"}
-            ]
-            return json.dumps(templates)
-        
-        @self.mcp.tool()
-        async def suggest_template(changes_summary: str, change_type: str) -> str:
-            """Suggest appropriate PR template based on changes."""
-            templates_response = await self.get_pr_templates()
-            templates = json.loads(templates_response)
-            
-            type_mapping = {
-                "bug": "bug.md", "fix": "bug.md",
-                "feature": "feature.md", "enhancement": "feature.md",
-                "docs": "docs.md", "documentation": "docs.md",
-                "refactor": "refactor.md", "cleanup": "refactor.md",
-                "test": "test.md", "testing": "test.md",
-                "performance": "performance.md", "optimization": "performance.md",
-                "security": "security.md"
-            }
-            
-            template_file = type_mapping.get(change_type.lower(), "feature.md")
-            selected_template = next((t for t in templates if t["name"] == template_file), templates[0])
-            
-            return json.dumps({
-                "recommended_template": selected_template,
-                "reasoning": f"Based on your analysis: '{changes_summary}', this appears to be a {change_type} change.",
-                "template_content": selected_template["content"],
-                "usage_hint": "Claude can help you fill out this template."
-            }, indent=2)
-        
-        # CI Monitoring Tools
-        @self.mcp.tool()
-        async def get_recent_actions_events(limit: int = 10) -> str:
-            """Get recent GitHub Actions events."""
-            if not EVENTS_FILE.exists():
-                return json.dumps([])
-            with open(EVENTS_FILE, 'r') as f:
-                events = json.load(f)
-            return json.dumps(events[-limit:], indent=2)
-        
-        @self.mcp.tool()
-        async def get_workflow_status(workflow_name: str = None) -> str:
-            """Get the current status of GitHub Actions workflows."""
-            if not EVENTS_FILE.exists():
-                return json.dumps({"message": "No GitHub Actions events received yet"})
-            with open(EVENTS_FILE, 'r') as f:
-                events = json.load(f)
-            if not events:
-                return json.dumps({"message": "No GitHub Actions events received yet"})
-
-            workflow_events = [e for e in events if e.get("workflow_run") is not None]
-            if workflow_name:
-                workflow_events = [e for e in workflow_events if e["workflow_run"].get("name") == workflow_name]
-
-            workflows = {}
-            for event in workflow_events:
-                run = event["workflow_run"]
-                name = run["name"]
-                if name not in workflows or run["updated_at"] > workflows[name]["updated_at"]:
-                    workflows[name] = {
-                        "name": name,
-                        "status": run["status"],
-                        "conclusion": run.get("conclusion"),
-                        "run_number": run["run_number"],
-                        "updated_at": run["updated_at"],
-                        "html_url": run["html_url"]
-                    }
-
-            return json.dumps(list(workflows.values()), indent=2)
-        
-        @self.mcp.tool()
-        async def get_documentation_workflow_status() -> str:
-            """Get the status of documentation-related workflows specifically."""
-            if not EVENTS_FILE.exists():
-                return json.dumps({"message": "No GitHub Actions events received yet"})
-            with open(EVENTS_FILE, 'r') as f:
-                events = json.load(f)
-            if not events:
-                return json.dumps({"message": "No GitHub Actions events received yet"})
-
-            # Filter for documentation workflows
-            doc_workflows = ["Build documentation", "Build PR Documentation", "Upload PR Documentation"]
-            workflow_events = [
-                e for e in events 
-                if e.get("workflow_run") and e["workflow_run"].get("name") in doc_workflows
-            ]
-
-            workflows = {}
-            for event in workflow_events:
-                run = event["workflow_run"]
-                name = run["name"]
-                if name not in workflows or run["updated_at"] > workflows[name]["updated_at"]:
-                    workflows[name] = {
-                        "name": name,
-                        "status": run["status"],
-                        "conclusion": run.get("conclusion"),
-                        "run_number": run["run_number"],
-                        "updated_at": run["updated_at"],
-                        "html_url": run["html_url"]
-                    }
-
-            return json.dumps(list(workflows.values()), indent=2)
-        
-        @self.mcp.tool()
-        async def get_failed_workflows() -> str:
-            """Get only failed workflows for quick troubleshooting."""
-            if not EVENTS_FILE.exists():
-                return json.dumps({"message": "No GitHub Actions events received yet"})
-            with open(EVENTS_FILE, 'r') as f:
-                events = json.load(f)
-            if not events:
-                return json.dumps({"message": "No GitHub Actions events received yet"})
-
-            workflow_events = [e for e in events if e.get("workflow_run") is not None]
-            failed_workflows = [
-                e for e in workflow_events 
-                if e["workflow_run"].get("conclusion") == "failure"
-            ]
-
-            workflows = {}
-            for event in failed_workflows:
-                run = event["workflow_run"]
-                name = run["name"]
-                if name not in workflows or run["updated_at"] > workflows[name]["updated_at"]:
-                    workflows[name] = {
-                        "name": name,
-                        "status": run["status"],
-                        "conclusion": run.get("conclusion"),
-                        "run_number": run["run_number"],
-                        "updated_at": run["updated_at"],
-                        "html_url": run["html_url"]
-                    }
-
-            return json.dumps(list(workflows.values()), indent=2)
-        
-        # Notification Tools
-        @self.mcp.tool()
-        async def send_slack_notification(message: str) -> str:
-            """Send Slack notification."""
-            return await self.send_slack_message(message)
-        
-        @self.mcp.tool()
-        async def send_gmail_notification(subject: str, message: str, recipient: str = None) -> str:
-            """Send Gmail notification."""
-            return send_gmail_notification(subject, message, recipient)
+        # Tools are already registered with the shared mcp instance
+        # Just verify they're available
+        print(f"MCP tools setup complete. Available tools: {len(self.mcp.tools)}")
+        for tool_name in self.mcp.tools.keys():
+            print(f"  - {tool_name}")
     
     async def store_event(self, event_type: str, data: dict):
         """Store GitHub event."""
