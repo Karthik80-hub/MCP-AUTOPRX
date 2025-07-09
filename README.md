@@ -80,7 +80,7 @@ response = requests.post(
 )
 ```
 
-#### **3. Function Calling (GPT/Gemini)**
+#### **3. Function Calling (LLM)**
 Define your tools as functions for LLM platforms:
 ```json
 {
