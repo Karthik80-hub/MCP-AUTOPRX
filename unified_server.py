@@ -153,9 +153,13 @@ class UnifiedServer:
                 "authorization_endpoint": "https://mcp-autoprx-production.up.railway.app/authorize",
                 "token_endpoint": "https://mcp-autoprx-production.up.railway.app/token",
                 "jwks_uri": "https://mcp-autoprx-production.up.railway.app/.well-known/jwks.json",
-                "response_types_supported": ["code", "token"],
+                "response_types_supported": ["code", "token", "id_token"],
                 "subject_types_supported": ["public"],
-                "id_token_signing_alg_values_supported": ["RS256"]
+                "id_token_signing_alg_values_supported": ["RS256"],
+                "scopes_supported": ["openid", "profile", "email"],
+                "token_endpoint_auth_methods_supported": ["client_secret_basic"],
+                "claims_supported": ["sub", "iss", "name", "email"],
+                "code_challenge_methods_supported": ["S256"]
             }
 
         @self.app.get("/.well-known/oauth-authorization-server")
@@ -164,7 +168,11 @@ class UnifiedServer:
                 "issuer": "https://mcp-autoprx-production.up.railway.app",
                 "authorization_endpoint": "https://mcp-autoprx-production.up.railway.app/authorize",
                 "token_endpoint": "https://mcp-autoprx-production.up.railway.app/token",
-                "scopes_supported": ["openid", "profile", "email"]
+                "scopes_supported": ["openid", "profile", "email"],
+                "response_types_supported": ["code", "token"],
+                "grant_types_supported": ["authorization_code", "client_credentials"],
+                "token_endpoint_auth_methods_supported": ["client_secret_basic"],
+                "code_challenge_methods_supported": ["S256"]
             }
         
         @self.app.get("/")
