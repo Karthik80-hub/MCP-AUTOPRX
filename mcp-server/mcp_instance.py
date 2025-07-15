@@ -6,7 +6,7 @@ import asyncio
 from mcp.server.fastmcp import FastMCP
 
 # Initialize MCP server
-mcp = FastMCP("pr-agent-slack")
+mcp = FastMCP("pr-agent-slack") 
 
 # Slack notification hook
 async def send_slack_alert(message: str):

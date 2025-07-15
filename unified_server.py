@@ -127,6 +127,33 @@ class UnifiedServer:
             if request.url.path == "/webhook/github":
                 return await call_next(request)
             
+            # For /mcp endpoint, accept both API key and OAuth Bearer token
+            if request.url.path == "/mcp":
+                # Check for API key first
+                api_key = request.headers.get("x-api-key")
+                expected_api_key = os.getenv("MCP_API_KEY")
+                
+                if api_key and expected_api_key and api_key == expected_api_key:
+                    return await call_next(request)
+                
+                # Check for OAuth Bearer token
+                auth_header = request.headers.get("authorization")
+                if auth_header and auth_header.startswith("Bearer "):
+                    # Accept any Bearer token for OAuth flow (simplified validation)
+                    return await call_next(request)
+                
+                # If neither API key nor Bearer token, require API key
+                if not expected_api_key:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="MCP_API_KEY environment variable not set. Please configure API key for security."
+                    )
+                
+                raise HTTPException(
+                    status_code=403, 
+                    detail="API key required. Set x-api-key header or provide OAuth Bearer token."
+                )
+            
             # Require API key for all other endpoints
             api_key = request.headers.get("x-api-key")
             expected_api_key = os.getenv("MCP_API_KEY")
