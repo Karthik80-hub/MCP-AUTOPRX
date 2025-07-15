@@ -63,9 +63,9 @@ class TestAnalyzeFileChanges:
             result = await analyze_file_changes()
             data = json.loads(result)
             
-                # Check for some expected fields (flexible to allow different implementations)
-                assert any(key in data for key in ["files_changed", "files", "changes", "diff"]), \
-                    "Result should include file change information"
+            # Check for some expected fields (flexible to allow different implementations)
+            assert any(key in data for key in ["files_changed", "files", "changes", "diff"]), \
+                "Result should include file change information"
 
 
 @pytest.mark.skipif(not IMPORTS_SUCCESSFUL, reason="Imports failed")
@@ -80,7 +80,7 @@ class TestGetPRTemplates:
         assert isinstance(result, str), "Should return a string"
         # Should be valid JSON
         data = json.loads(result)
-            assert isinstance(data, list), "Should return a JSON array of templates"
+        assert isinstance(data, list), "Should return a JSON array of templates"
     
     @pytest.mark.asyncio
     async def test_returns_templates(self):
@@ -88,14 +88,14 @@ class TestGetPRTemplates:
         result = await get_pr_templates()
         templates = json.loads(result)
         
-            assert len(templates) > 0, "Should return at least one template"
-            
-            # Check that templates have expected structure
-            for template in templates:
-                assert isinstance(template, dict), "Each template should be a dictionary"
-                # Should have some identifying information
-                assert any(key in template for key in ["filename", "name", "type", "id"]), \
-                    "Templates should have an identifier"
+        assert len(templates) > 0, "Should return at least one template"
+        
+        # Check that templates have expected structure
+        for template in templates:
+            assert isinstance(template, dict), "Each template should be a dictionary"
+            # Should have some identifying information
+            assert any(key in template for key in ["filename", "name", "type", "id"]), \
+                "Templates should have an identifier"
 
 
 @pytest.mark.skipif(not IMPORTS_SUCCESSFUL, reason="Imports failed")
@@ -121,4 +121,4 @@ if __name__ == "__main__":
         exit(1)
     
     # Run tests
-    pytest.main([__file__, "-v"])
+    pytest.main([__file__, "-v"]) 

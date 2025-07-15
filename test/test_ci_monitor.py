@@ -49,18 +49,18 @@ class TestGetRecentActionsEvents:
     async def test_returns_json_string(self):
         """Test that get_recent_actions_events returns a JSON string."""
         result = await get_recent_actions_events()
-            
-            assert isinstance(result, str), "Should return a string"
-            # Should be valid JSON
-            data = json.loads(result)
+        
+        assert isinstance(result, str), "Should return a string"
+        # Should be valid JSON
+        data = json.loads(result)
         assert isinstance(data, list), "Should return a JSON array"
     
     @pytest.mark.asyncio
     async def test_includes_required_fields(self):
         """Test that the result includes expected fields."""
         result = await get_recent_actions_events()
-            data = json.loads(result)
-            
+        data = json.loads(result)
+        
         # Should return a list (even if empty)
         assert isinstance(data, list), "Should return a list"
 
@@ -164,4 +164,4 @@ if __name__ == "__main__":
         exit(1)
     
     # Run tests
-    pytest.main([__file__, "-v"])
+    pytest.main([__file__, "-v"]) 
