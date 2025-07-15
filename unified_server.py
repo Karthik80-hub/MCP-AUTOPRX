@@ -115,7 +115,10 @@ class UnifiedServer:
             public_endpoints = [
                 "/", "/health", "/docs", "/openapi.json",
                 "/.well-known/openid-configuration",
-                "/.well-known/oauth-authorization-server"
+                "/.well-known/oauth-authorization-server",
+                "/oauth/register",
+                "/oauth/token",
+                "/authorize"
             ]
             if request.url.path in public_endpoints:
                 return await call_next(request)
@@ -172,7 +175,55 @@ class UnifiedServer:
                 "response_types_supported": ["code", "token"],
                 "grant_types_supported": ["authorization_code", "client_credentials"],
                 "token_endpoint_auth_methods_supported": ["client_secret_basic"],
-                "code_challenge_methods_supported": ["S256"]
+                "code_challenge_methods_supported": ["S256"],
+                "registration_endpoint": "https://mcp-autoprx-production.up.railway.app/oauth/register"
+            }
+
+        @self.app.post("/oauth/register")
+        async def oauth_register(request: Request):
+            """OAuth client registration endpoint."""
+            try:
+                data = await request.json()
+                # Return a mock client registration response
+                return {
+                    "client_id": "mcp-client-" + str(int(time.time())),
+                    "client_secret": "mock-secret-" + str(int(time.time())),
+                    "client_id_issued_at": int(time.time()),
+                    "client_secret_expires_at": 0,
+                    "redirect_uris": data.get("redirect_uris", []),
+                    "grant_types": data.get("grant_types", ["authorization_code"]),
+                    "response_types": data.get("response_types", ["code"]),
+                    "token_endpoint_auth_method": data.get("token_endpoint_auth_method", "client_secret_basic")
+                }
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.post("/oauth/token")
+        async def oauth_token(request: Request):
+            """OAuth token endpoint."""
+            try:
+                form_data = await request.form()
+                grant_type = form_data.get("grant_type")
+                
+                if grant_type == "client_credentials":
+                    # Return a mock access token
+                    return {
+                        "access_token": "mock-access-token-" + str(int(time.time())),
+                        "token_type": "Bearer",
+                        "expires_in": 3600,
+                        "scope": "openid profile email"
+                    }
+                else:
+                    raise HTTPException(status_code=400, detail="Unsupported grant type")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.get("/authorize")
+        async def authorize():
+            """OAuth authorization endpoint."""
+            return {
+                "error": "not_implemented",
+                "error_description": "Authorization endpoint not implemented for MCP server"
             }
         
         @self.app.get("/")
