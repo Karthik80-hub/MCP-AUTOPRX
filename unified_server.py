@@ -373,8 +373,13 @@ class UnifiedServer:
             if not self.mcp:
                 return {"error": "MCP instance not initialized"}
             
+            # Get actual registered tools from MCP instance
+            actual_tools = []
+            if hasattr(self.mcp, 'tools'):
+                actual_tools = list(self.mcp.tools.keys())
+            
             # Return the tools that should be registered
-            tools = [
+            expected_tools = [
                 {
                     "name": "analyze_file_changes",
                     "description": "Analyze git file changes and generate summaries",
@@ -423,11 +428,14 @@ class UnifiedServer:
             ]
             
             return {
-                "tools": tools,
-                "total_tools": len(tools),
+                "expected_tools": expected_tools,
+                "actual_registered_tools": actual_tools,
+                "total_expected": len(expected_tools),
+                "total_registered": len(actual_tools),
                 "mcp_available": MCP_AVAILABLE,
                 "mcp_initialized": self.mcp is not None,
-                "note": "Tools are registered with the shared MCP instance"
+                "mcp_instance_type": type(self.mcp).__name__ if self.mcp else None,
+                "note": "Check actual_registered_tools to see what's actually available"
             }
         
         @self.app.get("/test-email")
@@ -655,10 +663,45 @@ class UnifiedServer:
             print("MCP not available, skipping tool setup")
             return
         
-        # Tools are already registered with the shared mcp instance
-        # Just verify they're available
-        print("MCP tools setup complete.")
-        print("Tools are registered with the shared MCP instance.")
+        # Verify tools are registered with the shared mcp instance
+        try:
+            # Force import of all tool modules to ensure they're registered
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), 'mcp-server'))
+            
+            # Import tools to ensure they're registered with the MCP instance
+            from tools.pr_analysis import analyze_file_changes, get_pr_templates
+            from tools.ci_monitor import (
+                get_recent_actions_events, 
+                get_workflow_status, 
+                get_documentation_workflow_status,
+                get_failed_workflows
+            )
+            from tools.slack_notifier import send_slack_notification
+            from tools.gmail_notifier import send_gmail_notification
+            from prompts.pr_prompts import suggest_template
+            from prompts.ci_prompts import format_ci_failure_alert, format_ci_success_summary
+            from prompts.review_prompts import (
+                analyze_ci_results,
+                create_deployment_summary,
+                generate_pr_status_report,
+                troubleshoot_workflow_failure
+            )
+            
+            print("MCP tools setup complete.")
+            print("All tools registered with the shared MCP instance.")
+            
+            # Debug: Print registered tools
+            if hasattr(self.mcp, 'tools'):
+                print(f"Registered tools: {list(self.mcp.tools.keys())}")
+            else:
+                print("MCP instance doesn't have tools attribute")
+                
+        except Exception as e:
+            print(f"Error setting up MCP tools: {e}")
+            import traceback
+            traceback.print_exc()
     
     async def store_event(self, event_type: str, data: dict):
         """Store GitHub event."""
