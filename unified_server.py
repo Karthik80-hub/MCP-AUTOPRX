@@ -118,6 +118,7 @@ class UnifiedServer:
                 "/.well-known/oauth-authorization-server",
                 "/oauth/register",
                 "/oauth/token",
+                "/token",
                 "/authorize"
             ]
             if request.url.path in public_endpoints:
@@ -242,6 +243,38 @@ class UnifiedServer:
                     }
                 else:
                     raise HTTPException(status_code=400, detail="Unsupported grant type")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.post("/token")
+        async def token_endpoint(request: Request):
+            """Standard OAuth token endpoint that Claude Code expects."""
+            try:
+                form_data = await request.form()
+                grant_type = form_data.get("grant_type")
+                code = form_data.get("code")
+                
+                # Handle authorization code flow
+                if grant_type == "authorization_code" and code:
+                    return {
+                        "access_token": "claude-code-token-" + str(int(time.time())),
+                        "token_type": "Bearer",
+                        "expires_in": 3600,
+                        "scope": "openid profile email"
+                    }
+                
+                # Handle client credentials flow
+                elif grant_type == "client_credentials":
+                    return {
+                        "access_token": "client-token-" + str(int(time.time())),
+                        "token_type": "Bearer",
+                        "expires_in": 3600,
+                        "scope": "openid profile email"
+                    }
+                
+                else:
+                    raise HTTPException(status_code=400, detail="Unsupported grant type or missing code")
+                    
             except Exception as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
