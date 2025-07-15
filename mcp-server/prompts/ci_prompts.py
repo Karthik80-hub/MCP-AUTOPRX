@@ -5,7 +5,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from mcp_instance import mcp
 
-@mcp.prompt()
+@mcp.tool()
 async def format_ci_failure_alert():
     return """Format this GitHub Actions failure as a Slack message using ONLY Slack markdown syntax:
 
@@ -33,7 +33,7 @@ Slack formatting rules:
 - Use simple bullet format
 - :emoji_name: for emojis"""
 
-@mcp.prompt()
+@mcp.tool()
 async def format_ci_success_summary():
     return """Format this successful GitHub Actions run as a Slack message using ONLY Slack markdown syntax:
 

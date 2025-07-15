@@ -23,7 +23,7 @@ TYPE_MAPPING = {
     "security": "security.md"
 }
 
-@mcp.prompt()
+@mcp.tool()
 async def suggest_template(changes_summary: str, change_type: str) -> str:
     templates_response = await get_pr_templates()
     templates = json.loads(templates_response)

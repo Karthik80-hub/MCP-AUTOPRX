@@ -5,7 +5,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from mcp_instance import mcp
 
-@mcp.prompt()
+@mcp.tool()
 async def analyze_ci_results():
     return """Please analyze the recent CI/CD results from GitHub Actions:
 
@@ -22,7 +22,7 @@ Format:
 - *Recommendations*: [Actions to take]
 - *Trends*: [Patterns you notice]"""
 
-@mcp.prompt()
+@mcp.tool()
 async def create_deployment_summary():
     return """Create a deployment summary:
 
@@ -35,7 +35,7 @@ Deployment Update
 - *Issues*: [Problems if any]
 - *Next Steps*: [Required actions if failed]"""
 
-@mcp.prompt()
+@mcp.tool()
 async def generate_pr_status_report():
     return """Generate a comprehensive PR status report:
 
@@ -63,7 +63,7 @@ async def generate_pr_status_report():
 - [Breaking changes]
 - [Dependencies]"""
 
-@mcp.prompt()
+@mcp.tool()
 async def troubleshoot_workflow_failure():
     return """Help troubleshoot GitHub Actions workflows:
 

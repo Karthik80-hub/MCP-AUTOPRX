@@ -9,8 +9,12 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from mcp_instance import mcp
 
-def send_gmail_notification(subject: str, message: str, recipient: str = None) -> str:
+@mcp.tool()
+async def send_gmail_notification(subject: str, message: str, recipient: str = None) -> str:
     """
     Send a Gmail notification.
     
@@ -77,8 +81,9 @@ def send_gmail_notification(subject: str, message: str, recipient: str = None) -
     except Exception as e:
         return f"Error sending Gmail notification: {str(e)}"
 
-def send_gmail_alert(subject: str, message: str, recipient: str = None) -> str:
+@mcp.tool()
+async def send_gmail_alert(subject: str, message: str, recipient: str = None) -> str:
     """
     Alias for send_gmail_notification for consistency with Slack notifier.
     """
-    return send_gmail_notification(subject, message, recipient) 
+    return await send_gmail_notification(subject, message, recipient) 
