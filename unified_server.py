@@ -219,12 +219,50 @@ class UnifiedServer:
                 raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.get("/authorize")
-        async def authorize():
-            """OAuth authorization endpoint."""
-            return {
-                "error": "not_implemented",
-                "error_description": "Authorization endpoint not implemented for MCP server"
-            }
+        async def authorize(
+            response_type: str = None,
+            client_id: str = None,
+            code_challenge: str = None,
+            code_challenge_method: str = None,
+            redirect_uri: str = None,
+            state: str = None,
+            resource: str = None
+        ):
+            """OAuth authorization endpoint that works with API keys."""
+            try:
+                # Check if API key is provided in headers
+                api_key = request.headers.get("x-api-key")
+                expected_api_key = os.getenv("MCP_API_KEY")
+                
+                # If no API key in headers, try to get it from query params
+                if not api_key:
+                    api_key = request.query_params.get("api_key")
+                
+                # Validate API key
+                if not expected_api_key:
+                    raise HTTPException(status_code=500, detail="MCP_API_KEY not configured")
+                
+                if not api_key or api_key != expected_api_key:
+                    raise HTTPException(status_code=401, detail="Invalid API key")
+                
+                # Generate authorization code
+                auth_code = f"auth_code_{int(time.time())}_{client_id}"
+                
+                # Build redirect URL with authorization code
+                redirect_url = f"{redirect_uri}?code={auth_code}&state={state}"
+                
+                # Return the redirect URL for the OAuth flow
+                return {
+                    "redirect_url": redirect_url,
+                    "authorization_code": auth_code,
+                    "state": state,
+                    "client_id": client_id
+                }
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
         
         @self.app.get("/")
         async def root():
