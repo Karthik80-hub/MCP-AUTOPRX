@@ -52,6 +52,9 @@ Your MCP-AutoPRX server can integrate with **virtually any LLM** that supports H
 # Direct MCP integration
 claude-code --mcp-server python unified_server.py
 
+# Or add your deployed server to Claude:
+claude mcp add --transport sse autoprx-server https://mcp-autoprx-production.up.railway.app/mcp
+
 # Claude can then use all your tools:
 # - analyze_file_changes
 # - get_pr_templates
@@ -151,6 +154,79 @@ Define your tools as functions for LLM platforms:
 **Health Check**: https://mcp-autoprx-production.up.railway.app/health
 
 **API Documentation**: https://mcp-autoprx-production.up.railway.app/docs
+
+---
+
+## Deploy Your Own Instance
+
+**Why deploy your own?** This repository provides a live demo server, but we recommend deploying your own instance for:
+
+- **Security**: Full control over your API keys and data
+- **Performance**: No shared resources or rate limits
+- **Customization**: Modify tools and workflows for your needs
+- **Learning**: Understand the technology by deploying it yourself
+- **Production Use**: Reliable, isolated environment for your team
+
+### Quick Deployment Steps
+
+1. **Fork this repository**
+   ```bash
+   # Click "Fork" on GitHub, then clone your fork
+   git clone https://github.com/YOUR_USERNAME/MCP-AutoPRX.git
+   cd MCP-AutoPRX
+   ```
+
+2. **Deploy to Railway**
+   ```bash
+   # Install Railway CLI
+   npm install -g @railway/cli
+   
+   # Login and deploy
+   railway login
+   railway init
+   railway up
+   ```
+
+3. **Configure Environment Variables**
+   ```bash
+   # Set your own secure API key
+   railway variables set MCP_API_KEY=your_secure_random_key_here
+   
+   # Configure notifications (optional)
+   railway variables set SLACK_WEBHOOK_URL=your_slack_webhook
+   railway variables set GMAIL_USER=your_email@gmail.com
+   railway variables set GMAIL_APP_PASSWORD=your_app_password
+   railway variables set DEFAULT_EMAIL_RECIPIENT=recipient@example.com
+   
+   # GitHub webhook security (recommended)
+   railway variables set GITHUB_WEBHOOK_SECRET=your_webhook_secret
+   ```
+
+4. **Get Your Server URL**
+   ```bash
+   # Find your deployment URL
+   railway status
+   # Your server will be available at: https://your-app-name.up.railway.app
+   ```
+
+5. **Register with Claude**
+   ```bash
+   # Use your own server URL
+   claude mcp add --transport sse autoprx-server https://your-app-name.up.railway.app/mcp
+   ```
+
+### Benefits of Self-Deployment
+
+| Aspect | Shared Server | Your Own Instance |
+|--------|---------------|-------------------|
+| **Security** | Shared API key | Your own API key |
+| **Data Privacy** | Shared storage | Your own data |
+| **Customization** | Limited | Full control |
+| **Rate Limits** | Shared | Your own limits |
+| **Reliability** | Depends on others | Your own uptime |
+| **Cost** | Free | Railway free tier |
+
+**Ready to deploy?** Follow the steps above and you'll have your own production-ready MCP server in minutes!
 
 ---
 
@@ -298,6 +374,44 @@ MCP-AutoPRX/
 
 ---
 
+## Claude Integration & MCP Commands
+
+### Register Your MCP Server with Claude
+
+To add your deployed MCP server to Claude:
+
+```bash
+claude mcp add --transport sse autoprx-server https://mcp-autoprx-production.up.railway.app/mcp
+```
+
+This will register your server as an MCP tool provider in Claude Code.
+
+### Test Your MCP Server in Claude
+
+Once registered, you can use the following commands in Claude Code:
+
+- **List all available tools:**
+  ```
+  /mcp tools
+  ```
+  This will show all tools your server exposes (from the `/tools` endpoint).
+
+- **Call a tool directly:**
+  ```
+  /mcp call analyze_file_changes base_branch=main include_diff=true max_diff_lines=100
+  ```
+  Replace the tool name and parameters as needed. Claude will call your `/call/{tool_name}` endpoint.
+
+- **See tool details:**
+  ```
+  /mcp describe analyze_file_changes
+  ```
+  (Shows the tool's description and parameters.)
+
+**Note:** Make sure your API key is set in Claude's MCP server configuration if your endpoints require it.
+
+---
+
 ## Development
 
 ### Key Components
@@ -327,7 +441,7 @@ MCP-AutoPRX/
 - **Data Format**: JSON with full event details
 
 ### API Endpoints
-- **Public**: `/`, `/health`, `/docs`, `/webhook/github`
+- **Public**: `/`, `/health`, `/docs`, `/webhook/github`, `/.well-known/openid-configuration`, `/.well-known/oauth-authorization-server`
 - **Protected**: `/tools`, `/mcp`, `/call/{tool_name}`, `/test-email`
 - **Authentication**: API key required for protected endpoints
 
@@ -482,6 +596,8 @@ We welcome contributions to MCP-AutoPRX! Here's how you can help:
 ---
 
 ## License
+
+**MIT License** – Use freely, but please attribute.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 

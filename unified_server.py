@@ -112,7 +112,11 @@ class UnifiedServer:
         @self.app.middleware("http")
         async def verify_api_key(request: Request, call_next):
             # Skip API key check for public endpoints
-            public_endpoints = ["/", "/health", "/docs", "/openapi.json"]
+            public_endpoints = [
+                "/", "/health", "/docs", "/openapi.json",
+                "/.well-known/openid-configuration",
+                "/.well-known/oauth-authorization-server"
+            ]
             if request.url.path in public_endpoints:
                 return await call_next(request)
             
@@ -141,6 +145,27 @@ class UnifiedServer:
     
     def setup_routes(self):
         """Setup HTTP routes for both webhooks and LLM access."""
+        
+        @self.app.get("/.well-known/openid-configuration")
+        async def openid_configuration():
+            return {
+                "issuer": "https://mcp-autoprx-production.up.railway.app",
+                "authorization_endpoint": "https://mcp-autoprx-production.up.railway.app/authorize",
+                "token_endpoint": "https://mcp-autoprx-production.up.railway.app/token",
+                "jwks_uri": "https://mcp-autoprx-production.up.railway.app/.well-known/jwks.json",
+                "response_types_supported": ["code", "token"],
+                "subject_types_supported": ["public"],
+                "id_token_signing_alg_values_supported": ["RS256"]
+            }
+
+        @self.app.get("/.well-known/oauth-authorization-server")
+        async def oauth_authorization_server():
+            return {
+                "issuer": "https://mcp-autoprx-production.up.railway.app",
+                "authorization_endpoint": "https://mcp-autoprx-production.up.railway.app/authorize",
+                "token_endpoint": "https://mcp-autoprx-production.up.railway.app/token",
+                "scopes_supported": ["openid", "profile", "email"]
+            }
         
         @self.app.get("/")
         async def root():
