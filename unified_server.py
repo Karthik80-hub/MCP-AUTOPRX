@@ -650,42 +650,77 @@ class UnifiedServer:
             print("MCP not available, skipping tool setup")
             return
         
-        # Simple approach - just register basic tools directly
         try:
-            # Add a simple test tool directly to the MCP instance
+            # Import all the original tools from mcp-server
+            import sys
+            import os
+            sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'mcp-server')))
+            
+            # Import the tool modules
+            from tools import pr_analysis, ci_monitor, slack_notifier
+            from prompts import pr_prompts
+            
+            # Register all tools with the MCP instance
+            # PR Analysis Tools
             @self.mcp.tool()
-            async def test_tool() -> str:
-                """Simple test tool to verify MCP is working."""
-                return "MCP test tool is working!"
+            async def analyze_file_changes(base_branch: str = "main", include_diff: bool = True, max_diff_lines: int = 500, working_directory: str = None) -> str:
+                """Analyze file changes in the current branch compared to base branch."""
+                return await pr_analysis.analyze_file_changes(base_branch, include_diff, max_diff_lines, working_directory)
             
             @self.mcp.tool()
-            async def get_server_info() -> str:
-                """Get server information."""
-                import json
-                return json.dumps({
-                    "server": "MCP-AutoPRX",
-                    "status": "running",
-                    "version": "1.0.0"
-                })
+            async def get_pr_templates() -> str:
+                """Get available PR templates."""
+                return await pr_analysis.get_pr_templates()
             
             @self.mcp.tool()
-            async def list_available_tools() -> str:
-                """List all available tools."""
-                import json
-                return json.dumps({
-                    "tools": ["test_tool", "get_server_info", "list_available_tools"],
-                    "count": 3
-                })
+            async def suggest_template(changes_summary: str, change_type: str) -> str:
+                """Suggest appropriate PR template based on changes."""
+                return await pr_prompts.suggest_template(changes_summary, change_type)
+            
+            # CI Monitoring Tools
+            @self.mcp.tool()
+            async def get_recent_actions_events(limit: int = 10) -> str:
+                """Get recent GitHub Actions events."""
+                return await ci_monitor.get_recent_actions_events(limit)
+            
+            @self.mcp.tool()
+            async def get_workflow_status(workflow_name: str = None) -> str:
+                """Get the current status of GitHub Actions workflows."""
+                return await ci_monitor.get_workflow_status(workflow_name)
+            
+            @self.mcp.tool()
+            async def get_documentation_workflow_status() -> str:
+                """Get the status of documentation-related workflows."""
+                return await ci_monitor.get_documentation_workflow_status()
+            
+            @self.mcp.tool()
+            async def get_failed_workflows() -> str:
+                """Get only failed workflows for quick troubleshooting."""
+                return await ci_monitor.get_failed_workflows()
+            
+            # Notification Tools
+            @self.mcp.tool()
+            async def send_slack_notification(message: str) -> str:
+                """Send a notification to Slack."""
+                return await slack_notifier.send_slack_notification(message)
+            
+            @self.mcp.tool()
+            async def send_gmail_notification(subject: str, message: str, recipient: str = None) -> str:
+                """Send a notification via Gmail."""
+                return await self.send_gmail_message(subject, message, recipient)
             
             print("MCP tools setup complete.")
-            print("Basic test tools registered.")
-            
-            # Tools are registered with decorators - they're handled by MCP protocol
-            print("Tools registered with @mcp.tool() decorators:")
-            print("  - test_tool")
-            print("  - get_server_info") 
-            print("  - list_available_tools")
-            print("Tools will be available via MCP protocol")
+            print("All original tools registered with MCP protocol:")
+            print("  - analyze_file_changes")
+            print("  - get_pr_templates")
+            print("  - suggest_template")
+            print("  - get_recent_actions_events")
+            print("  - get_workflow_status")
+            print("  - get_documentation_workflow_status")
+            print("  - get_failed_workflows")
+            print("  - send_slack_notification")
+            print("  - send_gmail_notification")
+            print("Total: 9 tools available via MCP protocol")
                 
         except Exception as e:
             print(f"Error setting up MCP tools: {e}")
