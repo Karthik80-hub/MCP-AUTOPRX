@@ -58,10 +58,14 @@ class UnifiedServer:
                 from mcp.server.fastmcp import FastMCP
                 self.mcp = FastMCP("mcp-autoprx")
                 print("Created new MCP instance")
+                print(f"MCP instance type: {type(self.mcp)}")
             except Exception as e:
                 print(f"Warning: MCP initialization failed: {e}")
+                import traceback
+                traceback.print_exc()
                 self.mcp = None
         else:
+            print("MCP not available")
             self.mcp = None
         
         self.setup_routes()
@@ -334,6 +338,11 @@ class UnifiedServer:
                 }
             }
         
+        @self.app.get("/test")
+        async def test_endpoint():
+            """Simple test endpoint."""
+            return {"message": "Server is working", "mcp_available": MCP_AVAILABLE}
+
         @self.app.get("/mcp-test")
         async def test_mcp():
             """Test MCP instance and tool registration."""
@@ -558,10 +567,18 @@ class UnifiedServer:
             async def mcp_endpoint(request: Request):
                 """Handle MCP requests from LLMs."""
                 try:
+                    if not self.mcp:
+                        raise HTTPException(status_code=500, detail="MCP instance not initialized")
+                    
                     data = await request.json()
+                    print(f"MCP request received: {data}")
                     response = await self.mcp.handle_request(data)
+                    print(f"MCP response: {response}")
                     return response
                 except Exception as e:
+                    print(f"MCP endpoint error: {e}")
+                    import traceback
+                    traceback.print_exc()
                     raise HTTPException(status_code=500, detail=str(e))
             
             @self.app.post("/call/{tool_name}")
