@@ -571,30 +571,33 @@ class UnifiedServer:
                 try:
                     data = await request.json()
                     print(f"MCP request received: {data}")
-                    response = await self.mcp.handle_request(data)
-                    print(f"MCP response: {response}")
-                    return response
-                except Exception as e:
-                    print(f"MCP endpoint error: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    raise HTTPException(status_code=500, detail=str(e))
-            
-            @self.app.get("/mcp")
-            async def mcp_get_endpoint(request: Request):
-                """Handle MCP GET requests (for discovery and SSE)."""
-                # Check if this is an SSE request
-                accept_header = request.headers.get("accept", "")
-                if "text/event-stream" in accept_header:
-                    # Return simple SSE response
-                    from fastapi.responses import StreamingResponse
                     
-                    async def generate_sse():
-                        # Send a simple tools list response
-                        tools_response = {
+                    # Handle MCP protocol requests properly
+                    method = data.get("method")
+                    request_id = data.get("id")
+                    
+                    if method == "initialize":
+                        # Handle initialization request
+                        response = {
                             "jsonrpc": "2.0",
-                            "method": "tools/list",
-                            "params": {
+                            "id": request_id,
+                            "result": {
+                                "protocolVersion": "2024-11-05",
+                                "capabilities": {
+                                    "tools": {}
+                                },
+                                "serverInfo": {
+                                    "name": "mcp-autoprx",
+                                    "version": "1.0.0"
+                                }
+                            }
+                        }
+                    elif method == "tools/list":
+                        # Handle tools list request
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {
                                 "tools": [
                                     {"name": "analyze_file_changes", "description": "Analyze file changes in the current branch compared to base branch."},
                                     {"name": "get_pr_templates", "description": "Get available PR templates."},
@@ -608,64 +611,100 @@ class UnifiedServer:
                                 ]
                             }
                         }
-                        yield f"data: {json.dumps(tools_response)}\n\n"
-                    
-                    return StreamingResponse(
-                        generate_sse(),
-                        media_type="text/event-stream",
-                        headers={
-                            "Cache-Control": "no-cache",
-                            "Connection": "keep-alive",
-                            "Access-Control-Allow-Origin": "*",
-                            "Access-Control-Allow-Headers": "*"
+                    elif method == "tools/call":
+                        # Handle tool execution request
+                        params = data.get("params", {})
+                        tool_name = params.get("name")
+                        arguments = params.get("arguments", {})
+                        
+                        # Execute the appropriate tool
+                        if tool_name == "analyze_file_changes":
+                            result = await self.analyze_file_changes(**arguments)
+                        elif tool_name == "get_pr_templates":
+                            result = await self.get_pr_templates()
+                        elif tool_name == "suggest_template":
+                            result = await self.suggest_template(
+                                arguments.get("changes_summary", ""),
+                                arguments.get("change_type", "feature")
+                            )
+                        elif tool_name == "get_recent_actions_events":
+                            result = await self.get_recent_actions_events(**arguments)
+                        elif tool_name == "get_workflow_status":
+                            result = await self.get_workflow_status(arguments.get("workflow_name"))
+                        elif tool_name == "get_documentation_workflow_status":
+                            result = await self.get_documentation_workflow_status()
+                        elif tool_name == "get_failed_workflows":
+                            result = await self.get_failed_workflows()
+                        elif tool_name == "send_slack_notification":
+                            result = await self.send_slack_message(arguments.get("message", ""))
+                        elif tool_name == "send_gmail_notification":
+                            result = await self.send_gmail_message(
+                                arguments.get("subject", ""),
+                                arguments.get("message", ""),
+                                arguments.get("recipient")
+                            )
+                        else:
+                            raise HTTPException(status_code=404, detail=f"Tool {tool_name} not found")
+                        
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": str(result)
+                                    }
+                                ]
+                            }
                         }
-                    )
-                else:
-                    # Return regular JSON response with tool list
+                    elif method == "shutdown":
+                        # Handle shutdown request
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {}
+                        }
+                    else:
+                        # Unknown method
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "error": {
+                                "code": -32601,
+                                "message": f"Method not found: {method}"
+                            }
+                        }
+                    
+                    print(f"MCP response: {response}")
+                    return response
+                    
+                except Exception as e:
+                    print(f"MCP endpoint error: {e}")
+                    import traceback
+                    traceback.print_exc()
                     return {
                         "jsonrpc": "2.0",
-                        "method": "tools/list",
-                        "params": {
-                            "tools": [
-                                {
-                                    "name": "analyze_file_changes",
-                                    "description": "Analyze file changes in the current branch compared to base branch."
-                                },
-                                {
-                                    "name": "get_pr_templates",
-                                    "description": "Get available PR templates."
-                                },
-                                {
-                                    "name": "suggest_template",
-                                    "description": "Suggest appropriate PR template based on changes."
-                                },
-                                {
-                                    "name": "get_recent_actions_events",
-                                    "description": "Get recent GitHub Actions events."
-                                },
-                                {
-                                    "name": "get_workflow_status",
-                                    "description": "Get the current status of GitHub Actions workflows."
-                                },
-                                {
-                                    "name": "get_documentation_workflow_status",
-                                    "description": "Get the status of documentation-related workflows."
-                                },
-                                {
-                                    "name": "get_failed_workflows",
-                                    "description": "Get only failed workflows for quick troubleshooting."
-                                },
-                                {
-                                    "name": "send_slack_notification",
-                                    "description": "Send a notification to Slack."
-                                },
-                                {
-                                    "name": "send_gmail_notification",
-                                    "description": "Send a notification via Gmail."
-                                }
-                            ]
+                        "id": data.get("id") if data else None,
+                        "error": {
+                            "code": -32603,
+                            "message": str(e)
                         }
                     }
+            
+            @self.app.get("/mcp")
+            async def mcp_get_endpoint(request: Request):
+                """Handle MCP GET requests (for discovery and health checks)."""
+                # Return basic server info for discovery
+                return {
+                    "jsonrpc": "2.0",
+                    "method": "server/info",
+                    "params": {
+                        "name": "mcp-autoprx",
+                        "version": "1.0.0",
+                        "protocolVersion": "2024-11-05"
+                    }
+                }
         else:
             @self.app.post("/mcp")
             async def mcp_endpoint(request: Request):
