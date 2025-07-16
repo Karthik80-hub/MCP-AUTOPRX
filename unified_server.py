@@ -87,6 +87,18 @@ class UnifiedServer:
         # Add API key protection middleware
         @self.app.middleware("http")
         async def verify_api_key(request: Request, call_next):
+            # Allow public access to GET /mcp (tool discovery)
+            if request.method == "GET" and request.url.path == "/mcp":
+                return await call_next(request)
+
+            # Require API key for POST /mcp (tool calls)
+            if request.method == "POST" and request.url.path == "/mcp":
+                api_key = request.headers.get("x-api-key")
+                expected_api_key = os.getenv("MCP_API_KEY")
+                if not expected_api_key or api_key != expected_api_key:
+                    raise HTTPException(status_code=403, detail="API key required for tool calls.")
+                return await call_next(request)
+                
             # Skip API key check for public endpoints
             public_endpoints = [
                 "/", "/health", "/docs", "/openapi.json",
@@ -720,9 +732,9 @@ class UnifiedServer:
                         elif tool_name == "get_failed_workflows":
                             result = await self.get_failed_workflows()
                         elif tool_name == "send_slack_notification":
-                            result = await self.send_slack_message(arguments.get("message", ""))
+                            result = await self.send_slack_notification(arguments.get("message", ""))
                         elif tool_name == "send_gmail_notification":
-                            result = await self.send_gmail_message(
+                            result = await self.send_gmail_notification(
                                 arguments.get("subject", ""),
                                 arguments.get("message", ""),
                                 arguments.get("recipient")
@@ -730,6 +742,9 @@ class UnifiedServer:
                         else:
                             raise HTTPException(status_code=404, detail=f"Tool {tool_name} not found")
                         
+                        # Ensure result is always a non-empty string
+                        if not result:
+                            result = f"No content returned by tool '{tool_name}'."
                         response = {
                             "jsonrpc": "2.0",
                             "id": request_id,
@@ -863,9 +878,9 @@ class UnifiedServer:
                     elif tool_name == "get_failed_workflows":
                         result = await self.get_failed_workflows()
                     elif tool_name == "send_slack_notification":
-                        result = await self.send_slack_message(arguments.get("message", ""))
+                        result = await self.send_slack_notification(arguments.get("message", ""))
                     elif tool_name == "send_gmail_notification":
-                        result = await self.send_gmail_message(
+                        result = await self.send_gmail_notification(
                             arguments.get("subject", ""),
                             arguments.get("message", ""),
                             arguments.get("recipient")
@@ -900,49 +915,58 @@ class UnifiedServer:
             async def analyze_file_changes(base_branch: str = "main", include_diff: bool = True, max_diff_lines: int = 500, working_directory: str = None) -> str:
                 """Analyze file changes in the current branch compared to base branch."""
                 return await pr_analysis.analyze_file_changes(base_branch, include_diff, max_diff_lines, working_directory)
-            
+            self.analyze_file_changes = analyze_file_changes
+
             @self.mcp.tool()
             async def get_pr_templates() -> str:
                 """Get available PR templates."""
                 return await pr_analysis.get_pr_templates()
-            
+            self.get_pr_templates = get_pr_templates
+
             @self.mcp.tool()
             async def suggest_template(changes_summary: str, change_type: str) -> str:
                 """Suggest appropriate PR template based on changes."""
                 return await pr_prompts.suggest_template(changes_summary, change_type)
-            
+            self.suggest_template = suggest_template
+
             # CI Monitoring Tools
             @self.mcp.tool()
             async def get_recent_actions_events(limit: int = 10) -> str:
                 """Get recent GitHub Actions events."""
                 return await ci_monitor.get_recent_actions_events(limit)
-            
+            self.get_recent_actions_events = get_recent_actions_events
+
             @self.mcp.tool()
             async def get_workflow_status(workflow_name: str = None) -> str:
                 """Get the current status of GitHub Actions workflows."""
                 return await ci_monitor.get_workflow_status(workflow_name)
-            
+            self.get_workflow_status = get_workflow_status
+
             @self.mcp.tool()
             async def get_documentation_workflow_status() -> str:
                 """Get the status of documentation-related workflows."""
                 return await ci_monitor.get_documentation_workflow_status()
-            
+            self.get_documentation_workflow_status = get_documentation_workflow_status
+
             @self.mcp.tool()
             async def get_failed_workflows() -> str:
                 """Get only failed workflows for quick troubleshooting."""
                 return await ci_monitor.get_failed_workflows()
-            
+            self.get_failed_workflows = get_failed_workflows
+
             # Notification Tools
             @self.mcp.tool()
             async def send_slack_notification(message: str) -> str:
                 """Send a notification to Slack."""
                 return await slack_notifier.send_slack_notification(message)
-            
+            self.send_slack_notification = send_slack_notification
+
             @self.mcp.tool()
             async def send_gmail_notification(subject: str, message: str, recipient: str = None) -> str:
                 """Send a notification via Gmail."""
                 return await self.send_gmail_message(subject, message, recipient)
-            
+            self.send_gmail_notification = send_gmail_notification
+
             print("MCP tools setup complete.")
             print("All original tools registered with MCP protocol:")
             print("  - analyze_file_changes")
