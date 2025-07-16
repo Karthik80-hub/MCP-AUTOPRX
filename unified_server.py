@@ -694,17 +694,47 @@ class UnifiedServer:
             
             @self.app.get("/mcp")
             async def mcp_get_endpoint(request: Request):
-                """Handle MCP GET requests (for discovery and health checks)."""
-                # Return basic server info for discovery
-                return {
-                    "jsonrpc": "2.0",
-                    "method": "server/info",
-                    "params": {
-                        "name": "mcp-autoprx",
-                        "version": "1.0.0",
-                        "protocolVersion": "2024-11-05"
+                """Handle MCP GET requests (for discovery and SSE)."""
+                # Check if this is an SSE request
+                accept_header = request.headers.get("accept", "")
+                if "text/event-stream" in accept_header:
+                    # Return SSE response with proper content type
+                    from fastapi.responses import StreamingResponse
+                    
+                    async def generate_sse():
+                        # Send server info as SSE
+                        server_info = {
+                            "jsonrpc": "2.0",
+                            "method": "server/info",
+                            "params": {
+                                "name": "mcp-autoprx",
+                                "version": "1.0.0",
+                                "protocolVersion": "2024-11-05"
+                            }
+                        }
+                        yield f"data: {json.dumps(server_info)}\n\n"
+                    
+                    return StreamingResponse(
+                        generate_sse(),
+                        media_type="text/event-stream",
+                        headers={
+                            "Cache-Control": "no-cache",
+                            "Connection": "keep-alive",
+                            "Access-Control-Allow-Origin": "*",
+                            "Access-Control-Allow-Headers": "*"
+                        }
+                    )
+                else:
+                    # Return regular JSON response for discovery
+                    return {
+                        "jsonrpc": "2.0",
+                        "method": "server/info",
+                        "params": {
+                            "name": "mcp-autoprx",
+                            "version": "1.0.0",
+                            "protocolVersion": "2024-11-05"
+                        }
                     }
-                }
         else:
             @self.app.post("/mcp")
             async def mcp_endpoint(request: Request):
