@@ -364,6 +364,35 @@ class UnifiedServer:
                 }
             }
         
+        @self.app.get("/mcp-test")
+        async def test_mcp():
+            """Test MCP instance and tool registration."""
+            if not MCP_AVAILABLE:
+                return {"error": "MCP not available"}
+            
+            if not self.mcp:
+                return {"error": "MCP instance not initialized"}
+            
+            try:
+                # Test if we can call a simple tool
+                result = await debug_test()
+                return {
+                    "status": "success",
+                    "mcp_available": MCP_AVAILABLE,
+                    "mcp_initialized": self.mcp is not None,
+                    "debug_test_result": result,
+                    "mcp_instance_type": type(self.mcp).__name__,
+                    "note": "MCP instance is working"
+                }
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "error": str(e),
+                    "mcp_available": MCP_AVAILABLE,
+                    "mcp_initialized": self.mcp is not None,
+                    "mcp_instance_type": type(self.mcp).__name__ if self.mcp else None
+                }
+
         @self.app.get("/tools")
         async def list_tools():
             """List available MCP tools for LLMs."""
@@ -671,6 +700,7 @@ class UnifiedServer:
             sys.path.append(os.path.join(os.path.dirname(__file__), 'mcp-server'))
             
             # Import tools to ensure they're registered with the MCP instance
+            from tools.debug_tool import debug_test, list_environment
             from tools.pr_analysis import analyze_file_changes, get_pr_templates
             from tools.ci_monitor import (
                 get_recent_actions_events, 
