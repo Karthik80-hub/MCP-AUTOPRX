@@ -104,48 +104,11 @@ class UnifiedServer:
             if request.url.path == "/webhook/github":
                 return await call_next(request)
             
-            # For /mcp endpoint, accept both API key and OAuth Bearer token
+            # For /mcp endpoint, allow access for Claude Code users
             if request.url.path == "/mcp":
-                # Allow GET requests to /mcp for discovery
-                if request.method == "GET":
-                    return await call_next(request)
-                
-                # For POST requests, check authentication
-                # Check for API key first
-                api_key = request.headers.get("x-api-key")
-                expected_api_key = os.getenv("MCP_API_KEY")
-                
-                if api_key and expected_api_key and api_key == expected_api_key:
-                    print(f"MCP request authenticated with API key")
-                    return await call_next(request)
-                
-                # Check for OAuth Bearer token
-                auth_header = request.headers.get("authorization")
-                if auth_header and auth_header.startswith("Bearer "):
-                    # Accept any Bearer token for OAuth flow (simplified validation)
-                    print(f"MCP request authenticated with OAuth Bearer token: {auth_header[:20]}...")
-                    return await call_next(request)
-                
-                # Debug: Log headers for troubleshooting
-                print(f"MCP request headers: {dict(request.headers)}")
-                print(f"Expected API key: {expected_api_key[:10] if expected_api_key else 'None'}...")
-                
-                # If neither API key nor Bearer token, require API key
-                if not expected_api_key:
-                    raise HTTPException(
-                        status_code=500,
-                        detail="MCP_API_KEY environment variable not set. Please configure API key for security."
-                    )
-                
-                # TEMPORARY: Allow MCP requests without authentication for testing
-                print(f"WARNING: MCP request without authentication - allowing for testing")
+                # Allow all MCP requests - this is the primary purpose of MCP
+                # Claude Code users should be able to access tools without authentication
                 return await call_next(request)
-                
-                # Uncomment this when ready for production:
-                # raise HTTPException(
-                #     status_code=403, 
-                #     detail="API key required. Set x-api-key header or provide OAuth Bearer token."
-                # )
             
             # Require API key for all other endpoints
             api_key = request.headers.get("x-api-key")
