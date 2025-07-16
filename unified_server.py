@@ -87,8 +87,8 @@ class UnifiedServer:
         # Add API key protection middleware
         @self.app.middleware("http")
         async def verify_api_key(request: Request, call_next):
-            # Allow public access to GET /mcp (tool discovery)
-            if request.method == "GET" and request.url.path == "/mcp":
+            # Allow public access to GET /mcp and /mcp/tools (tool discovery)
+            if request.method == "GET" and request.url.path in ["/mcp", "/mcp/tools"]:
                 return await call_next(request)
 
             # Require API key for POST /mcp (tool calls)
@@ -98,7 +98,7 @@ class UnifiedServer:
                 if not expected_api_key or api_key != expected_api_key:
                     raise HTTPException(status_code=403, detail="API key required for tool calls.")
                 return await call_next(request)
-                
+
             # Skip API key check for public endpoints
             public_endpoints = [
                 "/", "/health", "/docs", "/openapi.json",
@@ -122,18 +122,11 @@ class UnifiedServer:
             if request.url.path == "/webhook/github":
                 return await call_next(request)
             
-            # For /mcp endpoint, allow access for Claude Code users
-            if request.url.path == "/mcp":
-                # Allow all MCP requests - this is the primary purpose of MCP
-                # Claude Code users should be able to access tools without authentication
-                return await call_next(request)
-            
             # Require API key for all other endpoints
             api_key = request.headers.get("x-api-key")
             expected_api_key = os.getenv("MCP_API_KEY")
             
             if not expected_api_key:
-                # Require API key even in production - no fallback for security
                 raise HTTPException(
                     status_code=500,
                     detail="MCP_API_KEY environment variable not set. Please configure API key for security."
