@@ -599,15 +599,99 @@ class UnifiedServer:
                             "id": request_id,
                             "result": {
                                 "tools": [
-                                    {"name": "analyze_file_changes", "description": "Analyze file changes in the current branch compared to base branch."},
-                                    {"name": "get_pr_templates", "description": "Get available PR templates."},
-                                    {"name": "suggest_template", "description": "Suggest appropriate PR template based on changes."},
-                                    {"name": "get_recent_actions_events", "description": "Get recent GitHub Actions events."},
-                                    {"name": "get_workflow_status", "description": "Get the current status of GitHub Actions workflows."},
-                                    {"name": "get_documentation_workflow_status", "description": "Get the status of documentation-related workflows."},
-                                    {"name": "get_failed_workflows", "description": "Get only failed workflows for quick troubleshooting."},
-                                    {"name": "send_slack_notification", "description": "Send a notification to Slack."},
-                                    {"name": "send_gmail_notification", "description": "Send a notification via Gmail."}
+                                    {
+                                        "name": "analyze_file_changes",
+                                        "description": "Analyze file changes in the current branch compared to base branch.",
+                                        "inputSchema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "base_branch": {"type": "string", "default": "main"},
+                                                "include_diff": {"type": "boolean", "default": True},
+                                                "max_diff_lines": {"type": "integer", "default": 500},
+                                                "working_directory": {"type": "string"}
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "name": "get_pr_templates",
+                                        "description": "Get available PR templates.",
+                                        "inputSchema": {
+                                            "type": "object",
+                                            "properties": {}
+                                        }
+                                    },
+                                    {
+                                        "name": "suggest_template",
+                                        "description": "Suggest appropriate PR template based on changes.",
+                                        "inputSchema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "changes_summary": {"type": "string"},
+                                                "change_type": {"type": "string", "default": "feature"}
+                                            },
+                                            "required": ["changes_summary"]
+                                        }
+                                    },
+                                    {
+                                        "name": "get_recent_actions_events",
+                                        "description": "Get recent GitHub Actions events.",
+                                        "inputSchema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "limit": {"type": "integer", "default": 10}
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "name": "get_workflow_status",
+                                        "description": "Get the current status of GitHub Actions workflows.",
+                                        "inputSchema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "workflow_name": {"type": "string"}
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "name": "get_documentation_workflow_status",
+                                        "description": "Get the status of documentation-related workflows.",
+                                        "inputSchema": {
+                                            "type": "object",
+                                            "properties": {}
+                                        }
+                                    },
+                                    {
+                                        "name": "get_failed_workflows",
+                                        "description": "Get only failed workflows for quick troubleshooting.",
+                                        "inputSchema": {
+                                            "type": "object",
+                                            "properties": {}
+                                        }
+                                    },
+                                    {
+                                        "name": "send_slack_notification",
+                                        "description": "Send a notification to Slack.",
+                                        "inputSchema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {"type": "string"}
+                                            },
+                                            "required": ["message"]
+                                        }
+                                    },
+                                    {
+                                        "name": "send_gmail_notification",
+                                        "description": "Send a notification via Gmail.",
+                                        "inputSchema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "subject": {"type": "string"},
+                                                "message": {"type": "string"},
+                                                "recipient": {"type": "string"}
+                                            },
+                                            "required": ["subject", "message"]
+                                        }
+                                    }
                                 ]
                             }
                         }
