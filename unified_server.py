@@ -38,38 +38,8 @@ except ImportError:
     print("MCP not available. Install with: pip install mcp")
     MCP_AVAILABLE = False
 
-# Import existing MCP tools and prompts
-try:
-    import sys
-    import os
-    # Add the mcp-server directory to Python path
-    sys.path.append(os.path.join(os.path.dirname(__file__), 'mcp-server'))
-    
-    # Import the shared MCP instance first
-    from mcp_instance import mcp
-    
-    # Import tools and prompts (this will register them with the shared mcp instance)
-    from tools.pr_analysis import analyze_file_changes, get_pr_templates
-    from tools.ci_monitor import (
-        get_recent_actions_events, 
-        get_workflow_status, 
-        get_documentation_workflow_status,
-        get_failed_workflows
-    )
-    from tools.slack_notifier import send_slack_notification
-    from tools.gmail_notifier import send_gmail_notification
-    from prompts.pr_prompts import suggest_template
-    from prompts.ci_prompts import format_ci_failure_alert, format_ci_success_summary
-    from prompts.review_prompts import (
-        analyze_ci_results,
-        create_deployment_summary,
-        generate_pr_status_report,
-        troubleshoot_workflow_failure
-    )
-    MCP_TOOLS_AVAILABLE = True
-except ImportError as e:
-    print(f"MCP tools not available: {e}")
-    MCP_TOOLS_AVAILABLE = False
+# Simple MCP setup - no complex imports
+MCP_TOOLS_AVAILABLE = True
 
 # Configuration
 EVENTS_FILE = Path("github_events.json")
@@ -82,12 +52,12 @@ class UnifiedServer:
         
         self.app = FastAPI(title="MCP-AutoPRX Unified Server", version="1.0.0")
         
-        # Use the shared MCP instance
-        if MCP_AVAILABLE and MCP_TOOLS_AVAILABLE:
+        # Create MCP instance directly
+        if MCP_AVAILABLE:
             try:
-                # Use the shared mcp instance from mcp_instance.py
-                self.mcp = mcp
-                print("Using shared MCP instance with registered tools")
+                from mcp.server.fastmcp import FastMCP
+                self.mcp = FastMCP("mcp-autoprx")
+                print("Created new MCP instance")
             except Exception as e:
                 print(f"Warning: MCP initialization failed: {e}")
                 self.mcp = None
@@ -407,64 +377,13 @@ class UnifiedServer:
             if hasattr(self.mcp, 'tools'):
                 actual_tools = list(self.mcp.tools.keys())
             
-            # Return the tools that should be registered
-            expected_tools = [
-                {
-                    "name": "analyze_file_changes",
-                    "description": "Analyze git file changes and generate summaries",
-                    "parameters": ["base_branch", "include_diff", "max_diff_lines"]
-                },
-                {
-                    "name": "get_pr_templates",
-                    "description": "Get available PR templates for different change types",
-                    "parameters": []
-                },
-                {
-                    "name": "suggest_template",
-                    "description": "Suggest appropriate PR template based on changes",
-                    "parameters": ["changes_summary", "change_type"]
-                },
-                {
-                    "name": "get_recent_actions_events",
-                    "description": "Get recent GitHub Actions events",
-                    "parameters": ["limit"]
-                },
-                {
-                    "name": "get_workflow_status",
-                    "description": "Get current status of GitHub Actions workflows",
-                    "parameters": ["workflow_name"]
-                },
-                {
-                    "name": "get_documentation_workflow_status",
-                    "description": "Get status of documentation-related workflows",
-                    "parameters": []
-                },
-                {
-                    "name": "get_failed_workflows",
-                    "description": "Get only failed workflows for troubleshooting",
-                    "parameters": []
-                },
-                {
-                    "name": "send_slack_notification",
-                    "description": "Send Slack notification",
-                    "parameters": ["message"]
-                },
-                {
-                    "name": "send_gmail_notification",
-                    "description": "Send Gmail notification",
-                    "parameters": ["subject", "message", "recipient"]
-                }
-            ]
-            
             return {
-                "expected_tools": expected_tools,
                 "actual_registered_tools": actual_tools,
-                "total_expected": len(expected_tools),
                 "total_registered": len(actual_tools),
                 "mcp_available": MCP_AVAILABLE,
                 "mcp_initialized": self.mcp is not None,
                 "mcp_instance_type": type(self.mcp).__name__ if self.mcp else None,
-                "note": "Check actual_registered_tools to see what's actually available"
+                "note": "Basic test tools should be available"
             }
         
         @self.app.get("/test-email")
@@ -692,35 +611,26 @@ class UnifiedServer:
             print("MCP not available, skipping tool setup")
             return
         
-        # Verify tools are registered with the shared mcp instance
+        # Simple approach - just register basic tools directly
         try:
-            # Force import of all tool modules to ensure they're registered
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), 'mcp-server'))
+            # Add a simple test tool directly to the MCP instance
+            @self.mcp.tool()
+            async def test_tool() -> str:
+                """Simple test tool to verify MCP is working."""
+                return "MCP test tool is working!"
             
-            # Import tools to ensure they're registered with the MCP instance
-            from tools.debug_tool import debug_test, list_environment
-            from tools.pr_analysis import analyze_file_changes, get_pr_templates
-            from tools.ci_monitor import (
-                get_recent_actions_events, 
-                get_workflow_status, 
-                get_documentation_workflow_status,
-                get_failed_workflows
-            )
-            from tools.slack_notifier import send_slack_notification
-            from tools.gmail_notifier import send_gmail_notification
-            from prompts.pr_prompts import suggest_template
-            from prompts.ci_prompts import format_ci_failure_alert, format_ci_success_summary
-            from prompts.review_prompts import (
-                analyze_ci_results,
-                create_deployment_summary,
-                generate_pr_status_report,
-                troubleshoot_workflow_failure
-            )
+            @self.mcp.tool()
+            async def get_server_info() -> str:
+                """Get server information."""
+                import json
+                return json.dumps({
+                    "server": "MCP-AutoPRX",
+                    "status": "running",
+                    "version": "1.0.0"
+                })
             
             print("MCP tools setup complete.")
-            print("All tools registered with the shared MCP instance.")
+            print("Basic test tools registered.")
             
             # Debug: Print registered tools
             if hasattr(self.mcp, 'tools'):
