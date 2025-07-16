@@ -8,7 +8,12 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from mcp_instance import mcp, on_ci_event_detected
 
+# Try multiple possible paths for the events file
 EVENTS_FILE = Path(__file__).parent.parent.parent / "webhook_server" / "github_events.json"
+if not EVENTS_FILE.exists():
+    EVENTS_FILE = Path(__file__).parent.parent.parent / "github_events.json"
+if not EVENTS_FILE.exists():
+    EVENTS_FILE = Path("github_events.json")
 
 # Define known workflows for this project
 KNOWN_WORKFLOWS = {
