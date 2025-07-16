@@ -586,124 +586,29 @@ class UnifiedServer:
                 # Check if this is an SSE request
                 accept_header = request.headers.get("accept", "")
                 if "text/event-stream" in accept_header:
-                    # Return SSE response with proper MCP protocol format
+                    # Return simple SSE response
                     from fastapi.responses import StreamingResponse
                     
                     async def generate_sse():
-                        # Send initial connection message
-                        yield "data: {\"jsonrpc\": \"2.0\", \"method\": \"initialize\", \"params\": {\"protocolVersion\": \"2024-11-05\", \"capabilities\": {\"tools\": {}}, \"clientInfo\": {\"name\": \"claude-code\", \"version\": \"1.0.0\"}}}\n\n"
-                        
-                        # Send tools list
+                        # Send a simple tools list response
                         tools_response = {
-                            "jsonrpc": "2.0",
-                            "id": 1,
-                            "result": {
-                                "protocolVersion": "2024-11-05",
-                                "capabilities": {
-                                    "tools": {}
-                                },
-                                "serverInfo": {
-                                    "name": "mcp-autoprx",
-                                    "version": "1.0.0"
-                                }
-                            }
-                        }
-                        yield f"data: {json.dumps(tools_response)}\n\n"
-                        
-                        # Send tools list
-                        tools_list = {
                             "jsonrpc": "2.0",
                             "method": "tools/list",
                             "params": {
                                 "tools": [
-                                    {
-                                        "name": "analyze_file_changes",
-                                        "description": "Analyze file changes in the current branch compared to base branch.",
-                                        "inputSchema": {
-                                            "type": "object",
-                                            "properties": {
-                                                "base_branch": {"type": "string", "default": "main"},
-                                                "include_diff": {"type": "boolean", "default": True},
-                                                "max_diff_lines": {"type": "integer", "default": 500},
-                                                "working_directory": {"type": "string"}
-                                            }
-                                        }
-                                    },
-                                    {
-                                        "name": "get_pr_templates",
-                                        "description": "Get available PR templates.",
-                                        "inputSchema": {"type": "object", "properties": {}}
-                                    },
-                                    {
-                                        "name": "suggest_template",
-                                        "description": "Suggest appropriate PR template based on changes.",
-                                        "inputSchema": {
-                                            "type": "object",
-                                            "properties": {
-                                                "changes_summary": {"type": "string"},
-                                                "change_type": {"type": "string", "default": "feature"}
-                                            },
-                                            "required": ["changes_summary"]
-                                        }
-                                    },
-                                    {
-                                        "name": "get_recent_actions_events",
-                                        "description": "Get recent GitHub Actions events.",
-                                        "inputSchema": {
-                                            "type": "object",
-                                            "properties": {
-                                                "limit": {"type": "integer", "default": 10}
-                                            }
-                                        }
-                                    },
-                                    {
-                                        "name": "get_workflow_status",
-                                        "description": "Get the current status of GitHub Actions workflows.",
-                                        "inputSchema": {
-                                            "type": "object",
-                                            "properties": {
-                                                "workflow_name": {"type": "string"}
-                                            }
-                                        }
-                                    },
-                                    {
-                                        "name": "get_documentation_workflow_status",
-                                        "description": "Get the status of documentation-related workflows.",
-                                        "inputSchema": {"type": "object", "properties": {}}
-                                    },
-                                    {
-                                        "name": "get_failed_workflows",
-                                        "description": "Get only failed workflows for quick troubleshooting.",
-                                        "inputSchema": {"type": "object", "properties": {}}
-                                    },
-                                    {
-                                        "name": "send_slack_notification",
-                                        "description": "Send a notification to Slack.",
-                                        "inputSchema": {
-                                            "type": "object",
-                                            "properties": {
-                                                "message": {"type": "string"}
-                                            },
-                                            "required": ["message"]
-                                        }
-                                    },
-                                    {
-                                        "name": "send_gmail_notification",
-                                        "description": "Send a notification via Gmail.",
-                                        "inputSchema": {
-                                            "type": "object",
-                                            "properties": {
-                                                "subject": {"type": "string"},
-                                                "message": {"type": "string"},
-                                                "recipient": {"type": "string"}
-                                            },
-                                            "required": ["subject", "message"]
-                                        }
-                                    }
+                                    {"name": "analyze_file_changes", "description": "Analyze file changes in the current branch compared to base branch."},
+                                    {"name": "get_pr_templates", "description": "Get available PR templates."},
+                                    {"name": "suggest_template", "description": "Suggest appropriate PR template based on changes."},
+                                    {"name": "get_recent_actions_events", "description": "Get recent GitHub Actions events."},
+                                    {"name": "get_workflow_status", "description": "Get the current status of GitHub Actions workflows."},
+                                    {"name": "get_documentation_workflow_status", "description": "Get the status of documentation-related workflows."},
+                                    {"name": "get_failed_workflows", "description": "Get only failed workflows for quick troubleshooting."},
+                                    {"name": "send_slack_notification", "description": "Send a notification to Slack."},
+                                    {"name": "send_gmail_notification", "description": "Send a notification via Gmail."}
                                 ]
                             }
                         }
-                        yield f"data: {json.dumps(tools_list)}\n\n"
+                        yield f"data: {json.dumps(tools_response)}\n\n"
                     
                     return StreamingResponse(
                         generate_sse(),
