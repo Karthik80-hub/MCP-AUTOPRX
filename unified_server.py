@@ -559,13 +559,34 @@ class UnifiedServer:
                     raise HTTPException(status_code=500, detail=str(e))
             
             @self.app.get("/mcp")
-            async def mcp_get_endpoint():
-                """Handle MCP GET requests (for discovery)."""
-                return {
-                    "message": "MCP server is running",
-                    "protocol": "mcp",
-                    "version": "1.0"
-                }
+            async def mcp_get_endpoint(request: Request):
+                """Handle MCP GET requests (for discovery and SSE)."""
+                # Check if this is an SSE request
+                accept_header = request.headers.get("accept", "")
+                if "text/event-stream" in accept_header:
+                    # Return SSE response
+                    from fastapi.responses import StreamingResponse
+                    
+                    async def generate_sse():
+                        yield "data: {\"message\": \"MCP server is running\", \"protocol\": \"mcp\", \"version\": \"1.0\"}\n\n"
+                    
+                    return StreamingResponse(
+                        generate_sse(),
+                        media_type="text/event-stream",
+                        headers={
+                            "Cache-Control": "no-cache",
+                            "Connection": "keep-alive",
+                            "Access-Control-Allow-Origin": "*",
+                            "Access-Control-Allow-Headers": "*"
+                        }
+                    )
+                else:
+                    # Return regular JSON response
+                    return {
+                        "message": "MCP server is running",
+                        "protocol": "mcp",
+                        "version": "1.0"
+                    }
         else:
             @self.app.post("/mcp")
             async def mcp_endpoint(request: Request):
