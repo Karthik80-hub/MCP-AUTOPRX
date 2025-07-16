@@ -630,3 +630,33 @@ For any queries, support, or feature requests:
 - **Live Server**: https://mcp-autoprx-production.up.railway.app
 - **Health Check**: https://mcp-autoprx-production.up.railway.app/health
 - **API Documentation**: https://mcp-autoprx-production.up.railway.app/docs
+
+# Claude Code Integration & Recent Fixes
+
+**Last updated: 2025-07-16**
+
+This project is now fully compatible with Claude Code as an MCP server!
+
+## Key Fixes for Claude Code MCP Integration
+- **Full MCP protocol support:**
+  - Implemented all required JSON-RPC methods: `initialize`, `tools/list`, `tools/call`, `shutdown`, and `notifications/initialized` (for UI health check)
+- **Proper inputSchema for all tools:**
+  - Each tool now advertises its parameters and required fields, so Claude Code can validate and use them
+- **HTTP POST transport:**
+  - The server uses HTTP POST for all MCP communication (not SSE or stdio)
+- **Public `/mcp` endpoint:**
+  - No authentication required for Claude Code to connect
+- **UI health check handler:**
+  - Added a handler for `notifications/initialized` so the Claude UI shows “connected” instead of “failed”
+- **Result:**
+  - Claude Code now shows your server as “connected”
+  - All 9 tools are available and usable
+  - No more protocol or schema errors
+
+## Changelog
+- Implemented full MCP protocol (initialize, tools/list, tools/call, shutdown, notifications/initialized)
+- Added inputSchema for all tools
+- Switched to HTTP POST transport
+- Made `/mcp` endpoint public
+- Added UI health check handler
+- Claude Code now works out-of-the-box with this server
