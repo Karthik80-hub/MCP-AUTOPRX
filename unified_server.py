@@ -742,6 +742,13 @@ class UnifiedServer:
                                 ]
                             }
                         }
+                    elif method == "notifications/initialized":
+                        # Handle notifications/initialized (Claude UI health check)
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {}
+                        }
                     elif method == "shutdown":
                         # Handle shutdown request
                         response = {
