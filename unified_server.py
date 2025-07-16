@@ -106,6 +106,11 @@ class UnifiedServer:
             
             # For /mcp endpoint, accept both API key and OAuth Bearer token
             if request.url.path == "/mcp":
+                # Allow GET requests to /mcp for discovery
+                if request.method == "GET":
+                    return await call_next(request)
+                
+                # For POST requests, check authentication
                 # Check for API key first
                 api_key = request.headers.get("x-api-key")
                 expected_api_key = os.getenv("MCP_API_KEY")
@@ -578,10 +583,24 @@ class UnifiedServer:
                     import traceback
                     traceback.print_exc()
                     raise HTTPException(status_code=500, detail=str(e))
+            
+            @self.app.get("/mcp")
+            async def mcp_get_endpoint():
+                """Handle MCP GET requests (for discovery)."""
+                return {
+                    "message": "MCP server is running",
+                    "protocol": "mcp",
+                    "version": "1.0"
+                }
         else:
             @self.app.post("/mcp")
             async def mcp_endpoint(request: Request):
                 """MCP endpoint when MCP is not available."""
+                raise HTTPException(status_code=503, detail="MCP functionality not available")
+            
+            @self.app.get("/mcp")
+            async def mcp_get_endpoint():
+                """MCP GET endpoint when MCP is not available."""
                 raise HTTPException(status_code=503, detail="MCP functionality not available")
             
             @self.app.post("/call/{tool_name}")
