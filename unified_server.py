@@ -92,11 +92,17 @@ class UnifiedServer:
                 "/", "/health", "/docs", "/openapi.json",
                 "/.well-known/openid-configuration",
                 "/.well-known/oauth-authorization-server",
+                "/.well-known/jwks.json",
                 "/oauth/register",
                 "/oauth/token",
                 "/token",
                 "/authorize"
             ]
+            
+            # Allow all .well-known endpoints (OAuth discovery)
+            if request.url.path.startswith("/.well-known/"):
+                return await call_next(request)
+                
             if request.url.path in public_endpoints:
                 return await call_next(request)
             
@@ -160,6 +166,22 @@ class UnifiedServer:
                 "token_endpoint_auth_methods_supported": ["client_secret_basic"],
                 "code_challenge_methods_supported": ["S256"],
                 "registration_endpoint": "https://mcp-autoprx-production.up.railway.app/oauth/register"
+            }
+
+        @self.app.get("/.well-known/jwks.json")
+        async def jwks_endpoint():
+            """JSON Web Key Set endpoint for OAuth/OIDC."""
+            return {
+                "keys": [
+                    {
+                        "kty": "RSA",
+                        "use": "sig",
+                        "kid": "mcp-autoprx-key-1",
+                        "alg": "RS256",
+                        "n": "mock-modulus-for-testing",
+                        "e": "AQAB"
+                    }
+                ]
             }
 
         @self.app.post("/oauth/register")
